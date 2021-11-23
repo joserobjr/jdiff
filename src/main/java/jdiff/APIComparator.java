@@ -15,6 +15,21 @@ import java.util.List;
 public class APIComparator {
 
     /**
+     * For easy local access to the old API object.
+     */
+    private static API oldAPI_; //FIXME Why is this static?
+
+    /**
+     * For easy local access to the new API object.
+     */
+    private static API newAPI_; //FIXME Why is this static?
+
+    /**
+     * Set to enable increased logging verbosity for debugging.
+     */
+    private final boolean trace = false;
+
+    /**
      * Top-level object representing the differences between two APIs.
      * It is this object which is used to generate the report later on.
      */
@@ -35,13 +50,98 @@ public class APIComparator {
     }
 
     /**
-     * For easy local access to the old API object.
+     * Decide if two blocks of documentation changed.
+     *
+     * @return true if both are non-null and differ,
+     * or if one is null and the other is not.
      */
-    private static API oldAPI_;
+    public static boolean docChanged(String oldDoc, String newDoc) {
+        if (!HTMLReportGenerator.reportDocChanges)
+            return false; // Don't even count doc changes as changes
+        if (oldDoc == null && newDoc != null)
+            return true;
+        if (oldDoc != null && newDoc == null)
+            return true;
+        return oldDoc != null && oldDoc.compareTo(newDoc) != 0;
+    }
+
     /**
-     * For easy local access to the new API object.
+     * Decide if two elements changed where they were defined.
+     *
+     * @return 0 if both are null, or both are non-null and are the same.
+     * 1 if the oldInherit was null and newInherit is non-null.
+     * 2 if the oldInherit was non-null and newInherit is null.
+     * 3 if the oldInherit was non-null and newInherit is non-null
+     * and they differ.
      */
-    private static API newAPI_;
+    public static int changedInheritance(String oldInherit, String newInherit) {
+        if (oldInherit == null && newInherit == null)
+            return 0;
+        if (oldInherit == null)
+            return 1;
+        if (newInherit == null)
+            return 2;
+        if (oldInherit.compareTo(newInherit) == 0)
+            return 0;
+        else
+            return 3;
+    }
+
+    /**
+     * Generate a link to the Javadoc page for the given method.
+     */
+    public static String linkToClass(MethodAPI m, boolean useNew) {
+        String sig = m.getSignature();
+        if (sig.compareTo("void") == 0)
+            sig = "";
+        return linkToClass(m.inheritedFrom_, m.name_, sig, useNew);
+    }
+
+    /**
+     * Generate a link to the Javadoc page for the given field.
+     */
+    public static String linkToClass(FieldAPI m, boolean useNew) {
+        return linkToClass(m.inheritedFrom_, m.name_, null, useNew);
+    }
+
+    /**
+     * Given the name of the class, generate a link to a relevant page.
+     * This was originally for inheritance changes, so the JDiff page could
+     * be a class changes page, or a section in a removed or added classes
+     * table. Since there was no easy way to tell which type the link
+     * should be, it is now just a link to the relevant Javadoc page.
+     */
+    public static String linkToClass(String className, String memberName,
+                                     String memberType, boolean useNew) {
+        if (!useNew && HTMLReportGenerator.oldDocPrefix == null) {
+            return "<tt>" + className + "</tt>"; // No link possible
+        }
+        API api = oldAPI_;
+        String prefix = HTMLReportGenerator.oldDocPrefix;
+        if (useNew) {
+            api = newAPI_;
+            prefix = HTMLReportGenerator.newDocPrefix;
+        }
+        ClassAPI cls = api.classes_.get(className);
+        if (cls == null) {
+            if (useNew)
+                System.out.println("Warning: class " + className + " not found in the new API when creating Javadoc link");
+            else
+                System.out.println("Warning: class " + className + " not found in the old API when creating Javadoc link");
+            return "<tt>" + className + "</tt>";
+        }
+        int clsIdx = className.indexOf(cls.name_);
+        if (clsIdx != -1) {
+            String pkgRef = className.substring(0, clsIdx);
+            pkgRef = pkgRef.replace('.', '/');
+            String res = "<a href=\"" + prefix + pkgRef + cls.name_ + ".html#" + memberName;
+            if (memberType != null)
+                res += "(" + memberType + ")";
+            res += "\" target=\"_top\">" + "<tt>" + cls.name_ + "</tt></a>";
+            return res;
+        }
+        return "<tt>" + className + "</tt>";
+    }
 
     /**
      * Compare two APIs.
@@ -68,7 +168,7 @@ public class APIComparator {
             // all the *API classes.
             int idx = Collections.binarySearch(newAPI.packages_, oldPkg);
             if (idx < 0) {
-                // If there an instance of a package with the same name 
+                // If there an instance of a package with the same name
                 // in both the old and new API, then treat it as changed,
                 // rather than removed and added. There will never be more than
                 // one instance of a package with the same name in an API.
@@ -84,8 +184,8 @@ public class APIComparator {
                     differs += 1.0;
                 }
             } else {
-                // The package exists unchanged in name or doc, but may 
-                // differ in classes and their members, so it still needs to 
+                // The package exists unchanged in name or doc, but may
+                // differ in classes and their members, so it still needs to
                 // be compared.
                 differs += 2.0 * comparePackages(oldPkg, newAPI.packages_.get(idx));
             }
@@ -116,18 +216,18 @@ public class APIComparator {
         // we can deduce more information about changes.
         MergeChanges.mergeRemoveAdd(apiDiff);
 
-// The percent change statistic reported for all elements in each API is  
+// The percent change statistic reported for all elements in each API is
 // defined recursively as follows:
-// 
+//
 // %age change = 100 * (added + removed + 2*changed)
 //               -----------------------------------
 //               sum of public elements in BOTH APIs
 //
 // The definition ensures that if all classes are removed and all new classes
 // added, the change will be 100%.
-// Evaluation of the visibility of elements has already been done when the 
+// Evaluation of the visibility of elements has already been done when the
 // XML was written out.
-// Note that this doesn't count changes in the modifiers of classes and 
+// Note that this doesn't count changes in the modifiers of classes and
 // packages. Other changes in members are counted.
         long denom = oldAPI.packages_.size() + newAPI.packages_.size();
         // This should never be zero because an API always has packages?
@@ -139,7 +239,7 @@ public class APIComparator {
             System.out.println("Top level changes: " + differs + "/" + denom);
         differs = (100.0 * differs) / (double) denom;
 
-        // Some differences such as documentation changes are not tracked in 
+        // Some differences such as documentation changes are not tracked in
         // the difference statistic, so a value of 0.0 does not mean that there
         // were no differences between the APIs.
         apiDiff.pdiff = differs;
@@ -175,7 +275,7 @@ public class APIComparator {
             // all the *API classes.
             int idx = Collections.binarySearch(newPkg.classes_, oldClass);
             if (idx < 0) {
-                // If there an instance of a class with the same name 
+                // If there an instance of a class with the same name
                 // in both the old and new package, then treat it as changed,
                 // rather than removed and added. There will never be more than
                 // one instance of a class with the same name in a package.
@@ -191,7 +291,7 @@ public class APIComparator {
                     differs += 1.0;
                 }
             } else {
-                // The class exists unchanged in name or modifiers, but may 
+                // The class exists unchanged in name or modifiers, but may
                 // differ in members, so it still needs to be compared.
                 differs += 2.0 * compareClasses(oldClass, newPkg.classes_.get(idx), pkgDiff);
             }
@@ -205,7 +305,7 @@ public class APIComparator {
             if (idx < 0) {
                 // See comments above
                 if (oldPkg.classes_.contains(newClass)) {
-                    // Don't mark a class as added or compare it 
+                    // Don't mark a class as added or compare it
                     // if it was already marked as changed
                 } else {
                     if (trace)
@@ -240,9 +340,8 @@ public class APIComparator {
         }
         if (trace)
             System.out.println("Package " + pkgDiff.name_ + " had a difference of " + differs + "/" + denom);
-        double denomD = denom;
-        pkgDiff.pdiff = 100.0 * differs / denomD;
-        return differs / denomD;
+        pkgDiff.pdiff = 100.0 * differs / denom;
+        return differs / denom;
     } // comparePackages()
 
     /**
@@ -355,9 +454,8 @@ public class APIComparator {
         }
         if (trace)
             System.out.println("  Class " + classDiff.name_ + " had a difference of " + differs + "/" + denom);
-        double denomD = denom;
-        classDiff.pdiff = 100.0 * differs / denomD;
-        return differs / denomD;
+        classDiff.pdiff = 100.0 * differs / denom;
+        return differs / denom;
     } // compareClasses()
 
     /**
@@ -481,18 +579,18 @@ public class APIComparator {
                     break;
                 }
             }
-// NOTE: there was a problem with the binarySearch for 
+// NOTE: there was a problem with the binarySearch for
 // java.lang.Byte.toString(byte b) returning -16 when the compareTo method
 // returned 0 on entry 13. Changed to use arrays instead, so maybe it was
-// an issue with methods having another List of params used indirectly by 
+// an issue with methods having another List of params used indirectly by
 // compareTo(), unlike constructors and fields?
 //            int idx = Collections.binarySearch(newClass.methods_, oldMethod);
             if (idx < 0) {
-                // If there is only one instance of a method with this name 
+                // If there is only one instance of a method with this name
                 // in both the old and new class, then treat it as changed,
                 // rather than removed and added.
                 // Find how many instances of this method name there are in
-                // the old and new class. The equals comparator is just on 
+                // the old and new class. The equals comparator is just on
                 // the method name.
                 int startOld = oldClass.methods_.indexOf(oldMethod);
                 int endOld = oldClass.methods_.lastIndexOf(oldMethod);
@@ -503,11 +601,11 @@ public class APIComparator {
                         startNew != -1 && startNew == endNew) {
                     MethodAPI newMethod = newClass.methods_.get(startNew);
                     // Only one method with that name exists in both packages,
-                    // so it is valid to compare the two methods. We know it 
+                    // so it is valid to compare the two methods. We know it
                     // has changed, because the binarySearch did not find it.
                     if (oldMethod.inheritedFrom_ == null ||
                             newMethod.inheritedFrom_ == null) {
-                        // We also know that at least one of the methods is 
+                        // We also know that at least one of the methods is
                         // locally defined.
                         compareMethods(oldMethod, newMethod, classDiff);
                         differs = true;
@@ -704,7 +802,7 @@ public class APIComparator {
             FieldAPI oldField = (iter.next());
             int idx = Collections.binarySearch(newClass.fields_, oldField);
             if (idx < 0) {
-                // If there an instance of a field with the same name 
+                // If there an instance of a field with the same name
                 // in both the old and new class, then treat it as changed,
                 // rather than removed and added. There will never be more than
                 // one instance of a field with the same name in a class.
@@ -816,100 +914,6 @@ public class APIComparator {
     } // compareFields()
 
     /**
-     * Decide if two blocks of documentation changed.
-     *
-     * @return true if both are non-null and differ,
-     * or if one is null and the other is not.
-     */
-    public static boolean docChanged(String oldDoc, String newDoc) {
-        if (!HTMLReportGenerator.reportDocChanges)
-            return false; // Don't even count doc changes as changes
-        if (oldDoc == null && newDoc != null)
-            return true;
-        if (oldDoc != null && newDoc == null)
-            return true;
-        return oldDoc != null && oldDoc.compareTo(newDoc) != 0;
-    }
-
-    /**
-     * Decide if two elements changed where they were defined.
-     *
-     * @return 0 if both are null, or both are non-null and are the same.
-     * 1 if the oldInherit was null and newInherit is non-null.
-     * 2 if the oldInherit was non-null and newInherit is null.
-     * 3 if the oldInherit was non-null and newInherit is non-null
-     * and they differ.
-     */
-    public static int changedInheritance(String oldInherit, String newInherit) {
-        if (oldInherit == null && newInherit == null)
-            return 0;
-        if (oldInherit == null)
-            return 1;
-        if (newInherit == null)
-            return 2;
-        if (oldInherit.compareTo(newInherit) == 0)
-            return 0;
-        else
-            return 3;
-    }
-
-    /**
-     * Generate a link to the Javadoc page for the given method.
-     */
-    public static String linkToClass(MethodAPI m, boolean useNew) {
-        String sig = m.getSignature();
-        if (sig.compareTo("void") == 0)
-            sig = "";
-        return linkToClass(m.inheritedFrom_, m.name_, sig, useNew);
-    }
-
-    /**
-     * Generate a link to the Javadoc page for the given field.
-     */
-    public static String linkToClass(FieldAPI m, boolean useNew) {
-        return linkToClass(m.inheritedFrom_, m.name_, null, useNew);
-    }
-
-    /**
-     * Given the name of the class, generate a link to a relevant page.
-     * This was originally for inheritance changes, so the JDiff page could
-     * be a class changes page, or a section in a removed or added classes
-     * table. Since there was no easy way to tell which type the link
-     * should be, it is now just a link to the relevant Javadoc page.
-     */
-    public static String linkToClass(String className, String memberName,
-                                     String memberType, boolean useNew) {
-        if (!useNew && HTMLReportGenerator.oldDocPrefix == null) {
-            return "<tt>" + className + "</tt>"; // No link possible
-        }
-        API api = oldAPI_;
-        String prefix = HTMLReportGenerator.oldDocPrefix;
-        if (useNew) {
-            api = newAPI_;
-            prefix = HTMLReportGenerator.newDocPrefix;
-        }
-        ClassAPI cls = api.classes_.get(className);
-        if (cls == null) {
-            if (useNew)
-                System.out.println("Warning: class " + className + " not found in the new API when creating Javadoc link");
-            else
-                System.out.println("Warning: class " + className + " not found in the old API when creating Javadoc link");
-            return "<tt>" + className + "</tt>";
-        }
-        int clsIdx = className.indexOf(cls.name_);
-        if (clsIdx != -1) {
-            String pkgRef = className.substring(0, clsIdx);
-            pkgRef = pkgRef.replace('.', '/');
-            String res = "<a href=\"" + prefix + pkgRef + cls.name_ + ".html#" + memberName;
-            if (memberType != null)
-                res += "(" + memberType + ")";
-            res += "\" target=\"_top\">" + "<tt>" + cls.name_ + "</tt></a>";
-            return res;
-        }
-        return "<tt>" + className + "</tt>";
-    }
-
-    /**
      * Return the number of methods which are locally defined.
      */
     public int numLocalMethods(List<MethodAPI> methods) {
@@ -932,9 +936,4 @@ public class APIComparator {
         }
         return res;
     }
-
-    /**
-     * Set to enable increased logging verbosity for debugging.
-     */
-    private final boolean trace = false;
 }

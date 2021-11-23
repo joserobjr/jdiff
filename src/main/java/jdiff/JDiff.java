@@ -18,6 +18,80 @@ import java.lang.reflect.Method;
  */
 public class JDiff extends Doclet {
 
+    /**
+     * Details for where to find JDiff.
+     */
+    static final String jDiffLocation = "http://www.jdiff.org";
+
+    /**
+     * Contact email address for the primary JDiff maintainer.
+     */
+    static final String authorEmail = "mdoar@pobox.com";
+
+    /**
+     * A description for HTML META tags.
+     */
+    static final String jDiffDescription = "JDiff is a Javadoc doclet which generates an HTML report of all the packages, classes, constructors, methods, and fields which have been removed, added or changed in any way, including their documentation, when two APIs are compared.";
+
+    /**
+     * Keywords for HTML META tags.
+     */
+    static final String jDiffKeywords = "diff, jdiff, javadiff, java diff, java difference, API difference, difference between two APIs, API diff, Javadoc, doclet";
+
+    /**
+     * The current JDiff version.
+     */
+    static final String version = "1.1.1";
+
+    /**
+     * Set to enable increased logging verbosity for debugging.
+     */
+    private static final boolean trace = false;
+
+    /**
+     * The name of the file where the XML representing the old API is
+     * stored.
+     */
+    static String oldFileName = "old_java.xml";
+
+    /**
+     * The name of the directory where the XML representing the old API is
+     * stored.
+     */
+    static String oldDirectory;
+
+    /**
+     * The name of the file where the XML representing the new API is
+     * stored.
+     */
+    static String newFileName = "new_java.xml";
+
+    /**
+     * The name of the directory where the XML representing the new API is
+     * stored.
+     */
+    static String newDirectory;
+
+    /**
+     * If set, then generate the XML for an API and exit.
+     */
+    static boolean writeXML;
+
+    /**
+     * If set, then read in two XML files and compare their APIs.
+     */
+    static boolean compareAPIs;
+
+    /**
+     * The file separator for the local filesystem, forward or backward slash.
+     */
+    static String DIR_SEP = System.getProperty("file.separator");
+
+    /**
+     * The current JVM version.
+     */
+    static String javaVersion = System.getProperty("java.version");
+
     public static LanguageVersion languageVersion() {
         return LanguageVersion.JAVA_1_5;
     }
@@ -34,112 +108,6 @@ public class JDiff extends Doclet {
         JDiff jd = new JDiff();
         return jd.startGeneration(root);
     }
-
-    /**
-     * Generate the summary of the APIs.
-     *
-     * @param newRoot the RootDoc object passed by Javadoc
-     * @return true if no problems encountered within JDiff
-     */
-    protected boolean startGeneration(RootDoc newRoot) {
-        long startTime = System.currentTimeMillis();
-
-        // Open the file where the XML representing the API will be stored.
-        // and generate the XML for the API into it.
-        if (writeXML) {
-            RootDocToXML.writeXML(newRoot);
-        }
-
-        if (compareAPIs) {
-            String tempOldFileName = oldFileName;
-            if (oldDirectory != null) {
-                tempOldFileName = oldDirectory;
-                if (!tempOldFileName.endsWith(JDiff.DIR_SEP)) {
-                    tempOldFileName += JDiff.DIR_SEP;
-                }
-                tempOldFileName += oldFileName;
-            }
-
-            // Check the file for the old API exists
-            File f = new File(tempOldFileName);
-            if (!f.exists()) {
-                System.out.println("Error: file '" + tempOldFileName + "' does not exist for the old API");
-                return false;
-            }
-            // Check the file for the new API exists
-
-            String tempNewFileName = newFileName;
-            if (newDirectory != null) {
-                tempNewFileName = newDirectory;
-                if (!tempNewFileName.endsWith(JDiff.DIR_SEP)) {
-                    tempNewFileName += JDiff.DIR_SEP;
-                }
-                tempNewFileName += newFileName;
-            }
-            f = new File(tempNewFileName);
-            if (!f.exists()) {
-                System.out.println("Error: file '" + tempNewFileName + "' does not exist for the new API");
-                return false;
-            }
-
-            // Read the file where the XML representing the old API is stored
-            // and create an API object for it.
-            System.out.print("JDiff: reading the old API in from file '" + tempOldFileName + "'...");
-            // Read the file in, but do not add any text to the global comments
-            API oldAPI = XMLToAPI.readFile(tempOldFileName, false, oldFileName);
-
-            // Read the file where the XML representing the new API is stored
-            // and create an API object for it.
-            System.out.print("JDiff: reading the new API in from file '" + tempNewFileName + "'...");
-            // Read the file in, and do add any text to the global comments
-            API newAPI = XMLToAPI.readFile(tempNewFileName, true, newFileName);
-
-            // Compare the old and new APIs.
-            APIComparator comp = new APIComparator();
-
-            comp.compareAPIs(oldAPI, newAPI);
-
-            // Read the file where the XML for comments about the changes between
-            // the old API and new API is stored and create a Comments object for 
-            // it. The Comments object may be null if no file exists.
-            int suffix = oldFileName.lastIndexOf('.');
-            String commentsFileName = "user_comments_for_" + oldFileName.substring(0, suffix);
-            suffix = newFileName.lastIndexOf('.');
-            commentsFileName += "_to_" + newFileName.substring(0, suffix) + ".xml";
-            commentsFileName = commentsFileName.replace(' ', '_');
-            if (HTMLReportGenerator.outputDir != null)
-                commentsFileName = HTMLReportGenerator.outputDir + DIR_SEP + commentsFileName;
-            System.out.println("JDiff: reading the comments in from file '" + commentsFileName + "'...");
-            Comments existingComments = Comments.readFile(commentsFileName);
-            if (existingComments == null)
-                System.out.println(" (the comments file will be created)");
-
-            // Generate an HTML report which summarises all the API differences.
-            HTMLReportGenerator reporter = new HTMLReportGenerator();
-            reporter.generate(comp, existingComments);
-
-            // Emit messages about which comments are now unused and
-            // which are new.
-            Comments newComments = reporter.getNewComments();
-            Comments.noteDifferences(existingComments, newComments);
-
-            // Write the new comments out to the same file, with unused comments
-            // now commented out.
-            System.out.println("JDiff: writing the comments out to file '" + commentsFileName + "'...");
-            Comments.writeFile(commentsFileName, newComments);
-        }
-
-        System.out.print("JDiff: finished (took " + (System.currentTimeMillis() - startTime) / 1000 + "s");
-        if (writeXML)
-            System.out.println(", not including scanning the source files).");
-        else if (compareAPIs)
-            System.out.println(").");
-        return true;
-    }
-
-//
-// Option processing
-// 
 
     /**
      * This method is called by Javadoc to
@@ -239,75 +207,105 @@ public class JDiff extends Doclet {
     }
 
     /**
-     * The name of the file where the XML representing the old API is
-     * stored.
+     * Generate the summary of the APIs.
+     *
+     * @param newRoot the RootDoc object passed by Javadoc
+     * @return true if no problems encountered within JDiff
      */
-    static String oldFileName = "old_java.xml";
+    protected boolean startGeneration(RootDoc newRoot) {
+        long startTime = System.currentTimeMillis();
 
-    /**
-     * The name of the directory where the XML representing the old API is
-     * stored.
-     */
-    static String oldDirectory = null;
+        // Open the file where the XML representing the API will be stored.
+        // and generate the XML for the API into it.
+        if (writeXML) {
+            RootDocToXML.writeXML(newRoot);
+        }
 
-    /**
-     * The name of the file where the XML representing the new API is
-     * stored.
-     */
-    static String newFileName = "new_java.xml";
+        if (compareAPIs) {
+            String tempOldFileName = oldFileName;
+            if (oldDirectory != null) {
+                tempOldFileName = oldDirectory;
+                if (!tempOldFileName.endsWith(JDiff.DIR_SEP)) {
+                    tempOldFileName += JDiff.DIR_SEP;
+                }
+                tempOldFileName += oldFileName;
+            }
 
-    /**
-     * The name of the directory where the XML representing the new API is
-     * stored.
-     */
-    static String newDirectory = null;
+            // Check the file for the old API exists
+            File f = new File(tempOldFileName);
+            if (!f.exists()) {
+                System.out.println("Error: file '" + tempOldFileName + "' does not exist for the old API");
+                return false;
+            }
+            // Check the file for the new API exists
 
-    /**
-     * If set, then generate the XML for an API and exit.
-     */
-    static boolean writeXML = false;
+            String tempNewFileName = newFileName;
+            if (newDirectory != null) {
+                tempNewFileName = newDirectory;
+                if (!tempNewFileName.endsWith(JDiff.DIR_SEP)) {
+                    tempNewFileName += JDiff.DIR_SEP;
+                }
+                tempNewFileName += newFileName;
+            }
+            f = new File(tempNewFileName);
+            if (!f.exists()) {
+                System.out.println("Error: file '" + tempNewFileName + "' does not exist for the new API");
+                return false;
+            }
 
-    /**
-     * If set, then read in two XML files and compare their APIs.
-     */
-    static boolean compareAPIs = false;
+            // Read the file where the XML representing the old API is stored
+            // and create an API object for it.
+            System.out.print("JDiff: reading the old API in from file '" + tempOldFileName + "'...");
+            // Read the file in, but do not add any text to the global comments
+            API oldAPI = XMLToAPI.readFile(tempOldFileName, false, oldFileName);
 
-    /**
-     * The file separator for the local filesystem, forward or backward slash.
-     */
-    static String DIR_SEP = System.getProperty("file.separator");
+            // Read the file where the XML representing the new API is stored
+            // and create an API object for it.
+            System.out.print("JDiff: reading the new API in from file '" + tempNewFileName + "'...");
+            // Read the file in, and do add any text to the global comments
+            API newAPI = XMLToAPI.readFile(tempNewFileName, true, newFileName);
 
-    /**
-     * Details for where to find JDiff.
-     */
-    static final String jDiffLocation = "http://www.jdiff.org";
-    /**
-     * Contact email address for the primary JDiff maintainer.
-     */
-    static final String authorEmail = "mdoar@pobox.com";
+            // Compare the old and new APIs.
+            APIComparator comp = new APIComparator();
 
-    /**
-     * A description for HTML META tags.
-     */
-    static final String jDiffDescription = "JDiff is a Javadoc doclet which generates an HTML report of all the packages, classes, constructors, methods, and fields which have been removed, added or changed in any way, including their documentation, when two APIs are compared.";
-    /**
-     * Keywords for HTML META tags.
-     */
-    static final String jDiffKeywords = "diff, jdiff, javadiff, java diff, java difference, API difference, difference between two APIs, API diff, Javadoc, doclet";
+            comp.compareAPIs(oldAPI, newAPI);
 
-    /**
-     * The current JDiff version.
-     */
-    static final String version = "1.1.1";
+            // Read the file where the XML for comments about the changes between
+            // the old API and new API is stored and create a Comments object for
+            // it. The Comments object may be null if no file exists.
+            int suffix = oldFileName.lastIndexOf('.');
+            String commentsFileName = "user_comments_for_" + oldFileName.substring(0, suffix);
+            suffix = newFileName.lastIndexOf('.');
+            commentsFileName += "_to_" + newFileName.substring(0, suffix) + ".xml";
+            commentsFileName = commentsFileName.replace(' ', '_');
+            if (HTMLReportGenerator.outputDir != null)
+                commentsFileName = HTMLReportGenerator.outputDir + DIR_SEP + commentsFileName;
+            System.out.println("JDiff: reading the comments in from file '" + commentsFileName + "'...");
+            Comments existingComments = Comments.readFile(commentsFileName);
+            if (existingComments == null)
+                System.out.println(" (the comments file will be created)");
 
-    /**
-     * The current JVM version.
-     */
-    static String javaVersion = System.getProperty("java.version");
+            // Generate an HTML report which summarises all the API differences.
+            HTMLReportGenerator reporter = new HTMLReportGenerator();
+            reporter.generate(comp, existingComments);
 
-    /**
-     * Set to enable increased logging verbosity for debugging.
-     */
-    private static final boolean trace = false;
+            // Emit messages about which comments are now unused and
+            // which are new.
+            Comments newComments = reporter.getNewComments();
+            Comments.noteDifferences(existingComments, newComments);
+
+            // Write the new comments out to the same file, with unused comments
+            // now commented out.
+            System.out.println("JDiff: writing the comments out to file '" + commentsFileName + "'...");
+            Comments.writeFile(commentsFileName, newComments);
+        }
+
+        System.out.print("JDiff: finished (took " + (System.currentTimeMillis() - startTime) / 1000 + "s");
+        if (writeXML)
+            System.out.println(", not including scanning the source files).");
+        else if (compareAPIs)
+            System.out.println(").");
+        return true;
+    }
 
 } //JDiff

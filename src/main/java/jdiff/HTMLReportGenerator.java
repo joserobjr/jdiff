@@ -16,10 +16,109 @@ import java.util.*;
 public class HTMLReportGenerator {
 
     /**
-     * Default constructor.
+     * The desired background color for JDiff tables.
      */
-    public HTMLReportGenerator() {
-    }
+    static final String bgcolor = "#FFFFFF";
+
+    /**
+     * Set to enable debugging output.
+     */
+    private static final boolean trace = false;
+
+    /**
+     * If set, then do not suggest comments for removals from the first
+     * sentence of the doc block of the old API.
+     */
+    public static boolean noCommentsOnRemovals;
+
+    /**
+     * If set, then do not suggest comments for additions from the first
+     * sentence of the doc block of the new API.
+     */
+    public static boolean noCommentsOnAdditions;
+
+    /**
+     * If set, then do not suggest comments for changes from the first
+     * sentence of the doc block of the new API.
+     */
+    public static boolean noCommentsOnChanges;
+
+    /**
+     * If set, then report changes in documentation (Javadoc comments)
+     * between the old and the new API. The default is that this is not set.
+     */
+    public static boolean reportDocChanges;
+
+    /**
+     * If set, then only report incompatible changes
+     * between the old and the new API. The default is that this is not set.
+     */
+    public static boolean incompatibleChangesOnly;
+
+    /**
+     * Define the prefix for HTML links to the existing set of Javadoc-
+     * generated documentation for the new API. E.g. For J2SE1.3.x, use
+     * "http://java.sun.com/j2se/1.3/docs/api/"
+     */
+    public static String newDocPrefix = "../";
+
+    /**
+     * Define the prefix for HTML links to the existing set of Javadoc-
+     * generated documentation for the old API.
+     */
+    public static String oldDocPrefix;
+
+    /**
+     * To generate statistical output, set this to true.
+     */
+    public static boolean doStats;
+
+    /**
+     * The destination directory for output files.
+     */
+    public static String outputDir;
+
+    /**
+     * The title used on the first page of the report. By default, this is
+     * &quot;API Differences Between &lt;name of old API&gt; and
+     * &lt;name of new API&gt;&quot;. It can be
+     * set by using the -doctitle option.
+     */
+    public static String docTitle;
+
+    /**
+     * The browser window title for the report. By default, this is
+     * &quot;API Differences Between &lt;name of old API&gt; and
+     * &lt;name of new API&gt;&quot;. It can be
+     * set by using the -windowtitle option.
+     */
+    public static String windowTitle;
+
+    /**
+     * The name of the file to which the top-level HTML file is written,
+     * and also the name of the subdirectory where most of the HTML appears,
+     * and also a prefix for the names of some of the files in that
+     * subdirectory.
+     */
+    static String reportFileName = "changes";
+
+    /**
+     * The suffix of the file to which the HTML output is currently being
+     * written.
+     */
+    static String reportFileExt = ".html";
+
+    /**
+     * The file to which the HTML output is currently being written.
+     */
+    static PrintWriter reportFile;
+
+    /**
+     * The object which represents the top of the tree of differences
+     * between two APIs. It is only used indirectly when emitting a
+     * navigation bar.
+     */
+    static APIDiff apiDiff;
 
     /**
      * The Comments object for existing comments.
@@ -34,6 +133,121 @@ public class HTMLReportGenerator {
      * the new comments are written out to the comments file.
      */
     private Comments newComments_;
+
+    /**
+     * Default constructor.
+     */
+    public HTMLReportGenerator() {
+    }
+
+    /**
+     * Emit a string which is a type by surrounding it with &lt;code&gt; tags.
+     * Also surround it with parentheses too. Used to display methods'
+     * parameters.
+     * Suggestions for where a browser should break the
+     * text are provided with &lt;br> and &ltnobr> tags.
+     */
+    public static void emitTypeWithParens(String type) {
+        emitTypeWithParens(type, true);
+    }
+
+    /**
+     * Emit a string which is a type by surrounding it with &lt;code&gt; tags.
+     * Also surround it with parentheses too. Used to display methods'
+     * parameters.
+     */
+    public static void emitTypeWithParens(String type, boolean addBreaks) {
+        if (type.compareTo("") == 0)
+            reportFile.print("()");
+        else {
+            int idx = type.indexOf(", ");
+            if (!addBreaks || idx == -1) {
+                reportFile.print("(<code>" + type + "</code>)");
+            } else {
+                // Make the browser break text at reasonable places
+                StringBuilder sepType = null;
+                StringTokenizer st = new StringTokenizer(type, ", ");
+                while (st.hasMoreTokens()) {
+                    String p = st.nextToken();
+                    if (sepType == null)
+                        sepType = new StringBuilder(p);
+                    else
+                        sepType.append(",</nobr> ").append(p).append("<nobr>");
+                }
+                reportFile.print("(<code>" + sepType + "<nobr></code>)");
+            }
+        }
+    }
+
+    /**
+     * Emit a string which is a type by surrounding it with &lt;code&gt; tags.
+     * Do not surround it with parentheses. Used to display methods' return
+     * types and field types.
+     */
+    public static void emitTypeWithNoParens(String type) {
+        if (type.compareTo("") != 0)
+            reportFile.print("<code>" + type + "</code>");
+    }
+
+    /**
+     * Return a String with the simple names of the classes in fqName.
+     * &quot;java.lang.String&quot; becomes &quot;String&quot;,
+     * &quotjava.lang.String, java.io.File&quot becomes &quotString, File&quot;
+     * and so on. If fqName is null, return null. If fqName is &quot;&quot;,
+     * return &quot;&quot;.
+     */
+    public static String simpleName(String fqNames) {
+        if (fqNames == null)
+            return null;
+        StringBuilder res = new StringBuilder();
+        boolean hasContent = false;
+        // We parse the string step by step to ensure we take
+        // fqNames that contains generics parameter in a whole.
+        ArrayList<String> fqNamesList = new ArrayList<>();
+        int genericParametersDepth = 0;
+        StringBuilder buffer = new StringBuilder();
+        for (int i = 0; i < fqNames.length(); i++) {
+            char c = fqNames.charAt(i);
+            if ('<' == c) {
+                genericParametersDepth++;
+            }
+            if ('>' == c) {
+                genericParametersDepth--;
+            }
+            if (',' != c || genericParametersDepth > 0) {
+                buffer.append(c);
+            } else if (',' == c) {
+                fqNamesList.add(buffer.toString().trim());
+                buffer = new StringBuilder(buffer.length());
+            }
+        }
+        fqNamesList.add(buffer.toString().trim());
+        for (String fqName : fqNamesList) {
+            // Assume this will be used inside a <nobr> </nobr> set of tags.
+            if (hasContent)
+                res.append(", ");
+            hasContent = true;
+            // Look for text within '<' and '>' in case this is a invocation of a generic
+
+            int firstBracket = fqName.indexOf('<');
+            int lastBracket = fqName.lastIndexOf('>');
+            String genericParameter = null;
+            if (firstBracket != -1 && lastBracket != -1) {
+                genericParameter = simpleName(fqName.substring(firstBracket + 1, lastBracket));
+                fqName = fqName.substring(0, firstBracket);
+            }
+
+            int lastDot = fqName.lastIndexOf('.');
+            if (lastDot < 0) {
+                res.append(fqName); // Already as simple as possible
+            } else {
+                res.append(fqName.substring(lastDot + 1));
+            }
+            if (genericParameter != null)
+                res.append("&lt;").append(genericParameter).append("&gt;");
+        }
+        return res.toString();
+    }
 
     /**
      * Accessor method for the freshly generated Comments object.
@@ -888,7 +1102,7 @@ public class HTMLReportGenerator {
         // Links for frames and no frames
         reportFile.println("<TR>");
 
-        // All of the previous and next links, and the frames and non-frames 
+        // All of the previous and next links, and the frames and non-frames
         // links are in one table cell
         reportFile.println("  <TD BGCOLOR=\"" + bgcolor + "\" CLASS=\"NavBarCell2\"><FONT SIZE=\"-2\">");
         // Display links to the previous and next packages or classes
@@ -1034,7 +1248,7 @@ public class HTMLReportGenerator {
                 // No link
                 reportFile.print("  " + shownPkgName);
             } else {
-                // Call this method again but this time to emit a link to the 
+                // Call this method again but this time to emit a link to the
                 // old program element.
                 writePackageTableEntry(pkgName, 1, possibleComment, true);
             }
@@ -1625,8 +1839,8 @@ public class HTMLReportGenerator {
                 memberDiff.oldExceptions_.compareTo(memberDiff.newExceptions_) != 0) {
             if (hasContent)
                 reportFile.print(" ");
-            // If either one of the exceptions has no spaces in it, or is 
-            // equal to "no exceptions", then just display the whole 
+            // If either one of the exceptions has no spaces in it, or is
+            // equal to "no exceptions", then just display the whole
             // exceptions texts.
             int spaceInOld = memberDiff.oldExceptions_.indexOf(" ");
             if (memberDiff.oldExceptions_.compareTo("no exceptions") == 0)
@@ -1641,7 +1855,7 @@ public class HTMLReportGenerator {
                 emitException(memberDiff.newExceptions_);
                 reportFile.println(".<br>");
             } else {
-                // Too many exceptions become unreadable, so just show the 
+                // Too many exceptions become unreadable, so just show the
                 // individual changes. Catch the case where exceptions are
                 // just reordered.
                 boolean firstChange = true;
@@ -1748,115 +1962,6 @@ public class HTMLReportGenerator {
     }
 
     /**
-     * Emit a string which is a type by surrounding it with &lt;code&gt; tags.
-     * Also surround it with parentheses too. Used to display methods'
-     * parameters.
-     * Suggestions for where a browser should break the
-     * text are provided with &lt;br> and &ltnobr> tags.
-     */
-    public static void emitTypeWithParens(String type) {
-        emitTypeWithParens(type, true);
-    }
-
-    /**
-     * Emit a string which is a type by surrounding it with &lt;code&gt; tags.
-     * Also surround it with parentheses too. Used to display methods'
-     * parameters.
-     */
-    public static void emitTypeWithParens(String type, boolean addBreaks) {
-        if (type.compareTo("") == 0)
-            reportFile.print("()");
-        else {
-            int idx = type.indexOf(", ");
-            if (!addBreaks || idx == -1) {
-                reportFile.print("(<code>" + type + "</code>)");
-            } else {
-                // Make the browser break text at reasonable places
-                StringBuilder sepType = null;
-                StringTokenizer st = new StringTokenizer(type, ", ");
-                while (st.hasMoreTokens()) {
-                    String p = st.nextToken();
-                    if (sepType == null)
-                        sepType = new StringBuilder(p);
-                    else
-                        sepType.append(",</nobr> ").append(p).append("<nobr>");
-                }
-                reportFile.print("(<code>" + sepType + "<nobr></code>)");
-            }
-        }
-    }
-
-    /**
-     * Emit a string which is a type by surrounding it with &lt;code&gt; tags.
-     * Do not surround it with parentheses. Used to display methods' return
-     * types and field types.
-     */
-    public static void emitTypeWithNoParens(String type) {
-        if (type.compareTo("") != 0)
-            reportFile.print("<code>" + type + "</code>");
-    }
-
-    /**
-     * Return a String with the simple names of the classes in fqName.
-     * &quot;java.lang.String&quot; becomes &quot;String&quot;,
-     * &quotjava.lang.String, java.io.File&quot becomes &quotString, File&quot;
-     * and so on. If fqName is null, return null. If fqName is &quot;&quot;,
-     * return &quot;&quot;.
-     */
-    public static String simpleName(String fqNames) {
-        if (fqNames == null)
-            return null;
-        StringBuilder res = new StringBuilder();
-        boolean hasContent = false;
-        // We parse the string step by step to ensure we take
-        // fqNames that contains generics parameter in a whole.
-        ArrayList<String> fqNamesList = new ArrayList<>();
-        int genericParametersDepth = 0;
-        StringBuilder buffer = new StringBuilder();
-        for (int i = 0; i < fqNames.length(); i++) {
-            char c = fqNames.charAt(i);
-            if ('<' == c) {
-                genericParametersDepth++;
-            }
-            if ('>' == c) {
-                genericParametersDepth--;
-            }
-            if (',' != c || genericParametersDepth > 0) {
-                buffer.append(c);
-            } else if (',' == c) {
-                fqNamesList.add(buffer.toString().trim());
-                buffer = new StringBuilder(buffer.length());
-            }
-        }
-        fqNamesList.add(buffer.toString().trim());
-        for (String fqName : fqNamesList) {
-            // Assume this will be used inside a <nobr> </nobr> set of tags.
-            if (hasContent)
-                res.append(", ");
-            hasContent = true;
-            // Look for text within '<' and '>' in case this is a invocation of a generic
-
-            int firstBracket = fqName.indexOf('<');
-            int lastBracket = fqName.lastIndexOf('>');
-            String genericParameter = null;
-            if (firstBracket != -1 && lastBracket != -1) {
-                genericParameter = simpleName(fqName.substring(firstBracket + 1, lastBracket));
-                fqName = fqName.substring(0, firstBracket);
-            }
-
-            int lastDot = fqName.lastIndexOf('.');
-            if (lastDot < 0) {
-                res.append(fqName); // Already as simple as possible
-            } else {
-                res.append(fqName.substring(lastDot + 1));
-            }
-            if (genericParameter != null)
-                res.append("&lt;").append(genericParameter).append("&gt;");
-        }
-        return res.toString();
-    }
-
-    /**
      * Find any existing comment and emit it. Add the new comment to the
      * list of new comments. The first instance of the string "@first" in
      * a hand-written comment will be replaced by the first sentence from
@@ -1946,110 +2051,5 @@ public class HTMLReportGenerator {
         for (int i = 0; i < indent; i++)
             reportFile.print("&nbsp;");
     }
-
-    /**
-     * The name of the file to which the top-level HTML file is written,
-     * and also the name of the subdirectory where most of the HTML appears,
-     * and also a prefix for the names of some of the files in that
-     * subdirectory.
-     */
-    static String reportFileName = "changes";
-
-    /**
-     * The suffix of the file to which the HTML output is currently being
-     * written.
-     */
-    static String reportFileExt = ".html";
-
-    /**
-     * The file to which the HTML output is currently being written.
-     */
-    static PrintWriter reportFile = null;
-
-    /**
-     * The object which represents the top of the tree of differences
-     * between two APIs. It is only used indirectly when emitting a
-     * navigation bar.
-     */
-    static APIDiff apiDiff = null;
-
-    /**
-     * If set, then do not suggest comments for removals from the first
-     * sentence of the doc block of the old API.
-     */
-    public static boolean noCommentsOnRemovals = false;
-
-    /**
-     * If set, then do not suggest comments for additions from the first
-     * sentence of the doc block of the new API.
-     */
-    public static boolean noCommentsOnAdditions = false;
-
-    /**
-     * If set, then do not suggest comments for changes from the first
-     * sentence of the doc block of the new API.
-     */
-    public static boolean noCommentsOnChanges = false;
-
-    /**
-     * If set, then report changes in documentation (Javadoc comments)
-     * between the old and the new API. The default is that this is not set.
-     */
-    public static boolean reportDocChanges = false;
-
-    /**
-     * If set, then only report incompatible changes
-     * between the old and the new API. The default is that this is not set.
-     */
-    public static boolean incompatibleChangesOnly = false;
-
-    /**
-     * Define the prefix for HTML links to the existing set of Javadoc-
-     * generated documentation for the new API. E.g. For J2SE1.3.x, use
-     * "http://java.sun.com/j2se/1.3/docs/api/"
-     */
-    public static String newDocPrefix = "../";
-
-    /**
-     * Define the prefix for HTML links to the existing set of Javadoc-
-     * generated documentation for the old API.
-     */
-    public static String oldDocPrefix = null;
-
-    /**
-     * To generate statistical output, set this to true.
-     */
-    public static boolean doStats = false;
-
-    /**
-     * The destination directory for output files.
-     */
-    public static String outputDir = null;
-
-    /**
-     * The title used on the first page of the report. By default, this is
-     * &quot;API Differences Between &lt;name of old API&gt; and
-     * &lt;name of new API&gt;&quot;. It can be
-     * set by using the -doctitle option.
-     */
-    public static String docTitle = null;
-
-    /**
-     * The browser window title for the report. By default, this is
-     * &quot;API Differences Between &lt;name of old API&gt; and
-     * &lt;name of new API&gt;&quot;. It can be
-     * set by using the -windowtitle option.
-     */
-    public static String windowTitle = null;
-
-    /**
-     * The desired background color for JDiff tables.
-     */
-    static final String bgcolor = "#FFFFFF";
-
-    /**
-     * Set to enable debugging output.
-     */
-    private static final boolean trace = false;
 
 }

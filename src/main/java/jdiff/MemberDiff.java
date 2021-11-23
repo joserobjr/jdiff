@@ -18,6 +18,7 @@ class MemberDiff {
      * The old member type. For methods, this is the return type.
      */
     public String oldType_;
+
     /**
      * The new member type. For methods, this is the return type.
      */
@@ -27,6 +28,7 @@ class MemberDiff {
      * The old signature. Null except for methods.
      */
     public String oldSignature_;
+
     /**
      * The new signature. Null except for methods.
      */
@@ -36,6 +38,7 @@ class MemberDiff {
      * The old list of exceptions. Null except for methods and constructors.
      */
     public String oldExceptions_;
+
     /**
      * The new list of exceptions. Null except for methods and constructors.
      */

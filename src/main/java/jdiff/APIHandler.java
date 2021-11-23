@@ -16,23 +16,25 @@ import java.util.LinkedList;
 class APIHandler extends DefaultHandler {
 
     /**
-     * The API object which is populated from the XML file.
+     * If set, then attempt to convert @link tags to HTML links.
+     * A few of the HTML links may be broken links.
      */
-    public API api_;
+    private static final boolean convertAtLinks = true;
 
     /**
-     * Default constructor.
+     * Set to enable increased logging verbosity for debugging.
      */
-    public APIHandler(API api, boolean createGlobalComments) {
-        api_ = api;
-        createGlobalComments_ = createGlobalComments;
-        tagStack = new LinkedList<>();
-    }
+    private static final boolean trace = false;
 
     /**
      * If set, then check that each comment is a sentence.
      */
     public static boolean checkIsSentence;
+
+    /**
+     * The API object which is populated from the XML file.
+     */
+    public API api_;
 
     /**
      * Contains the name of the current package element type
@@ -45,7 +47,7 @@ class APIHandler extends DefaultHandler {
     /**
      * If set, then create the global list of comments.
      */
-    private boolean createGlobalComments_;
+    private final boolean createGlobalComments_;
 
     /**
      * Set if inside a doc element.
@@ -66,7 +68,16 @@ class APIHandler extends DefaultHandler {
      * The stack of SingleComment objects awaiting the comment text
      * currently being assembled.
      */
-    private LinkedList<String> tagStack;
+    private final LinkedList<String> tagStack;
+
+    /**
+     * Default constructor.
+     */
+    public APIHandler(API api, boolean createGlobalComments) {
+        api_ = api;
+        createGlobalComments_ = createGlobalComments;
+        tagStack = new LinkedList<>();
+    }
 
     /**
      * Called at the start of the document.
@@ -186,7 +197,7 @@ class APIHandler extends DefaultHandler {
         } else if (currentElement.compareTo("class") == 0 ||
                 currentElement.compareTo("interface") == 0) {
             // Feature request 510307 and bug 517383: duplicate comment ids.
-            // The end of a member element leaves the currentElement at the 
+            // The end of a member element leaves the currentElement at the
             // "class" level, but the next class may in fact be an interface
             // and so the currentElement here will be "interface".
             if (localName.compareTo("class") == 0 ||
@@ -226,7 +237,7 @@ class APIHandler extends DefaultHandler {
                 currentText.compareTo(Comments.placeHolderText) != 0) {
             System.out.println("Warning: text of comment does not end in a period: " + currentText);
         }
-        // The construction of the commentID assumes that the 
+        // The construction of the commentID assumes that the
         // documentation is the final element to be parsed. The format matches
         // the format used in the report generator to look up comments in the
         // the existingComments object.
@@ -261,7 +272,7 @@ class APIHandler extends DefaultHandler {
         // element has changed (not removed or added).
         if (createGlobalComments_ && commentID != null) {
             String ct = currentText;
-            // Use any deprecation text as the possible comment, ignoring 
+            // Use any deprecation text as the possible comment, ignoring
             // any other comment text.
             if (currentDepText != null) {
                 ct = currentDepText;
@@ -354,16 +365,5 @@ class APIHandler extends DefaultHandler {
         e.printStackTrace();
         System.exit(1);
     }
-
-    /**
-     * If set, then attempt to convert @link tags to HTML links.
-     * A few of the HTML links may be broken links.
-     */
-    private static final boolean convertAtLinks = true;
-
-    /**
-     * Set to enable increased logging verbosity for debugging.
-     */
-    private static final boolean trace = false;
 
 }

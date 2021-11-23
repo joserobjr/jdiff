@@ -17,15 +17,17 @@ class PackageDiff {
     /**
      * Classes added in the new API.
      */
-    public List<ClassAPI> classesAdded;
+    public List<ClassAPI> classesAdded = new ArrayList<>();
+
     /**
      * Classes removed in the new API.
      */
-    public List<ClassAPI> classesRemoved;
+    public List<ClassAPI> classesRemoved = new ArrayList<>();
+
     /**
      * Classes changed in the new API.
      */
-    public List<ClassDiff> classesChanged;
+    public List<ClassDiff> classesChanged = new ArrayList<>();
 
     /**
      * A string describing the changes in documentation.
@@ -40,8 +42,5 @@ class PackageDiff {
      */
     public PackageDiff(String name) {
         name_ = name;
-        classesAdded = new ArrayList<>(); // ClassAPI[]
-        classesRemoved = new ArrayList<>(); // ClassAPI[]
-        classesChanged = new ArrayList<>(); // ClassDiff[]
     }
 }

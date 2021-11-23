@@ -67,6 +67,11 @@ class MethodAPI implements Comparable<MethodAPI> {
     public String doc_;
 
     /**
+     * Cached result of getSignature().
+     */
+    public String signature_ = null;
+
+    /**
      * Constructor.
      */
     public MethodAPI(String name, String returnType, boolean isAbstract,
@@ -149,11 +154,6 @@ class MethodAPI implements Comparable<MethodAPI> {
     public boolean equalSignatures(MethodAPI o) {
         return this == o || getSignature().compareTo((o).getSignature()) == 0;
     }
-
-    /**
-     * Cached result of getSignature().
-     */
-    public String signature_ = null;
 
     /**
      * Return the signature of the method.

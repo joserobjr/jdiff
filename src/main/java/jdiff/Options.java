@@ -12,6 +12,16 @@ import com.sun.javadoc.DocErrorReporter;
 public class Options {
 
     /**
+     * Set to enable increased logging verbosity for debugging.
+     */
+    private static final boolean trace = false;
+
+    /**
+     * All the options passed on the command line. Logged to XML.
+     */
+    public static String cmdOptions = "";
+
+    /**
      * Default constructor.
      */
     public Options() {
@@ -434,14 +444,4 @@ public class Options {
         System.err.println();
         System.err.println("For more help, see jdiff.html");
     }
-
-    /**
-     * All the options passed on the command line. Logged to XML.
-     */
-    public static String cmdOptions = "";
-
-    /**
-     * Set to enable increased logging verbosity for debugging.
-     */
-    private static final boolean trace = false;
 }

@@ -19,16 +19,83 @@ import java.util.List;
 public class HTMLIndexes {
 
     /**
+     * Whether to log all missing @since tags to a file or not.
+     * If false, just warn the user.
+     */
+    public static boolean logMissingSinces = true;
+
+    /**
+     * The file used to output details of missing @since tags.
+     */
+    public static PrintWriter missingSincesFile;
+
+    /**
+     * The number of non-breaking spaces to indent a duplicate indexes'
+     * entries by.
+     */
+    private final int INDENT_SIZE = 2;
+
+    /**
+     * The HTMLReportGenerator instance used to write HTML.
+     */
+    private final HTMLReportGenerator h_;
+
+    /**
+     * The list of all changes for all program elements.
+     */
+    private List<Index> allNames;
+
+    /**
+     * The list of all package changes.
+     */
+    private List<Index> packageNames;
+
+    /**
+     * The list of all class changes.
+     */
+    private List<Index> classNames;
+
+    /**
+     * The list of all constructor changes.
+     */
+    private List<Index> ctorNames;
+
+    /**
+     * The list of all method changes.
+     */
+    private List<Index> methNames;
+
+    /**
+     * The list of all field changes.
+     */
+    private List<Index> fieldNames;
+
+    /**
+     * If set, then use allNames to generate the letter indexes.
+     */
+    private boolean isAllNames;
+
+    /**
+     * Set if there was at least one removal in the entire API.
+     */
+    private boolean atLeastOneRemoval;
+
+    /**
+     * Set if there was at least one addition in the entire API.
+     */
+    private boolean atLeastOneAddition;
+
+    /**
+     * Set if there was at least one change in the entire API.
+     */
+    private boolean atLeastOneChange;
+
+    /**
      * Constructor.
      */
     public HTMLIndexes(HTMLReportGenerator h) {
         h_ = h;
     }
-
-    /**
-     * The HTMLReportGenerator instance used to write HTML.
-     */
-    private HTMLReportGenerator h_;
 
     /**
      * Emit all the bottom left frame index files.
@@ -41,7 +108,7 @@ public class HTMLIndexes {
                                        String allDiffsIndexName,
                                        APIDiff apiDiff) {
 
-        // indexType values: 0 = removals only, 1 = additions only, 
+        // indexType values: 0 = removals only, 1 = additions only,
         // 2 = changes only. 3 = all differences. Run all differences
         // first for all program element types so we know whether there
         // are any removals etc for the allDiffs index.
@@ -50,7 +117,7 @@ public class HTMLIndexes {
         emitBottomLeftFile(constructorsIndexName, apiDiff, 3, "Constructor");
         emitBottomLeftFile(methodsIndexName, apiDiff, 3, "Method");
         emitBottomLeftFile(fieldsIndexName, apiDiff, 3, "Field");
-        // The allindex must be done last, since it uses the results from 
+        // The allindex must be done last, since it uses the results from
         // the previous ones
         emitBottomLeftFile(allDiffsIndexName, apiDiff, 3, "All");
         // Now generate the other indexes
@@ -146,7 +213,7 @@ public class HTMLIndexes {
         if (larger)
             size = -1;
         char oldsw = '\0';
-        for (Index entry: isAllNames? allNames : list) {
+        for (Index entry : isAllNames ? allNames : list) {
             char sw = entry.name_.charAt(0);
             char swu = Character.toUpperCase(sw);
             if (swu != Character.toUpperCase(oldsw)) {
@@ -351,17 +418,6 @@ public class HTMLIndexes {
     }
 
     /**
-     * Whether to log all missing @since tags to a file or not.
-     * If false, just warn the user.
-     */
-    public static boolean logMissingSinces = true;
-
-    /**
-     * The file used to output details of missing @since tags.
-     */
-    public static PrintWriter missingSincesFile = null;
-
-    /**
      * Emit elements in the given iterator which were added and
      * missing @since tags.
      */
@@ -513,7 +569,7 @@ public class HTMLIndexes {
         if (multipleMarker != 0)
             h_.indent(INDENT_SIZE);
         if (cls.changeType_ == 0) {
-            // Emit a reference to the correct place for the class in the 
+            // Emit a reference to the correct place for the class in the
             // JDiff page for the package
             h_.writeText("<A HREF=\"pkg_" + cls.pkgName_ + HTMLReportGenerator.reportFileExt +
                     "#" + cls.name_ + "\" class=\"hiddenlink\" target=\"rightframe\"><strike>" + cls.name_ + "</strike></A><br>");
@@ -879,11 +935,11 @@ public class HTMLIndexes {
         emitIndexHeader("All Differences", indexType, atLeastOneRemoval,
                 atLeastOneAddition, atLeastOneChange);
 
-        // Tell generateLetterIndex to use allNames as the list when 
+        // Tell generateLetterIndex to use allNames as the list when
         // using the other methods to generate the indexes.
         isAllNames = true;
 
-        // Now emit a line for each entry in the list in the appropriate 
+        // Now emit a line for each entry in the list in the appropriate
         // format for each program element
         Iterator<Index> iter = allNames.iterator();
         char oldsw = '\0';
@@ -918,7 +974,7 @@ public class HTMLIndexes {
         if (currIndex != null)
             oldsw = emitIndexEntryForAny(currIndex, oldsw, multipleMarker);
 
-        // Tell generateLetterIndex to stop using allNames as the list when 
+        // Tell generateLetterIndex to stop using allNames as the list when
         // using the other methods to generate the indexes.
         isAllNames = false;
     }
@@ -948,41 +1004,6 @@ public class HTMLIndexes {
     }
 
     /**
-     * The list of all changes for all program elements.
-     */
-    private List<Index> allNames = null; // Index[]
-
-    /**
-     * The list of all package changes.
-     */
-    private List<Index> packageNames = null; // Index[]
-
-    /**
-     * The list of all class changes.
-     */
-    private List<Index> classNames = null; // Index[]
-
-    /**
-     * The list of all constructor changes.
-     */
-    private List<Index> ctorNames = null; // Index[]
-
-    /**
-     * The list of all method changes.
-     */
-    private List<Index> methNames = null; // Index[]
-
-    /**
-     * The list of all field changes.
-     */
-    private List<Index> fieldNames = null; // Index[]
-
-    /**
-     * If set, then use allNames to generate the letter indexes.
-     */
-    private boolean isAllNames = false;
-
-    /**
      * If any of the parameters are set, then set the respective atLeastOne
      * variable, used to generate the links at the top of the allDiffs index.
      * Never unset an atLeastOne variable.
@@ -996,27 +1017,6 @@ public class HTMLIndexes {
         if (hasChanges)
             atLeastOneChange = true;
     }
-
-    /**
-     * Set if there was at least one removal in the entire API.
-     */
-    private boolean atLeastOneRemoval = false;
-
-    /**
-     * Set if there was at least one addition in the entire API.
-     */
-    private boolean atLeastOneAddition = false;
-
-    /**
-     * Set if there was at least one change in the entire API.
-     */
-    private boolean atLeastOneChange = false;
-
-    /**
-     * The number of non-breaking spaces to indent a duplicate indexes'
-     * entries by.
-     */
-    private final int INDENT_SIZE = 2;
 }
 
 /**

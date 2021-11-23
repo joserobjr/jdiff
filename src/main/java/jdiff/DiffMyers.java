@@ -40,25 +40,9 @@ import java.util.Hashtable;
 
 public class DiffMyers {
 
-    /**
-     * Prepare to find differences between two arrays.  Each element of
-     * the arrays is translated to an "equivalence number" based on
-     * the result of <code>equals</code>.  The original Object arrays
-     * are no longer needed for computing the differences.  They will
-     * be needed again later to print the results of the comparison as
-     * an edit script, if desired.
-     */
-    public DiffMyers(Object[] a, Object[] b) {
-        Hashtable<Object, Integer> h = new Hashtable<>(a.length + b.length);
-        filevec[0] = new file_data(a, h);
-        filevec[1] = new file_data(b, h);
-    }
+    private final file_data[] filevec = new file_data[2];
 
-    /**
-     * 1 more than the maximum equivalence value used for this or its
-     * sibling file.
-     */
-    private int equiv_max = 1;
+    private final boolean inhibit = false;
 
     /**
      * When set to true, the comparison uses a heuristic to speed it up.
@@ -73,18 +57,41 @@ public class DiffMyers {
      */
     public boolean no_discards = false;
 
+    /**
+     * 1 more than the maximum equivalence value used for this or its
+     * sibling file.
+     */
+    private int equiv_max = 1;
+
     private int[] xvec, yvec;        /* Vectors being compared. */
+
     private int[] fdiag;                /* Vector, indexed by diagonal, containing
                                    the X coordinate of the point furthest
                                    along the given diagonal in the forward
                                    search of the edit matrix. */
+
     private int[] bdiag;                /* Vector, indexed by diagonal, containing
                                    the X coordinate of the point furthest
                                    along the given diagonal in the backward
                                    search of the edit matrix. */
+
     private int fdiagoff, bdiagoff;
-    private final file_data[] filevec = new file_data[2];
+
     private int cost;
+
+    /**
+     * Prepare to find differences between two arrays.  Each element of
+     * the arrays is translated to an "equivalence number" based on
+     * the result of <code>equals</code>.  The original Object arrays
+     * are no longer needed for computing the differences.  They will
+     * be needed again later to print the results of the comparison as
+     * an edit script, if desired.
+     */
+    public DiffMyers(Object[] a, Object[] b) {
+        Hashtable<Object, Integer> h = new Hashtable<>(a.length + b.length);
+        filevec[0] = new file_data(a, h);
+        filevec[1] = new file_data(b, h);
+    }
 
     /**
      * Find the midpoint of the shortest edit script for a specified
@@ -332,8 +339,6 @@ public class DiffMyers {
         filevec[1].discard_confusing_lines(filevec[0]);
     }
 
-    private final boolean inhibit = false;
-
     /**
      * Adjust inserts/deletes of blank lines to join changes
      * as much as possible.
@@ -474,25 +479,29 @@ public class DiffMyers {
 
     public static class change {
         /**
-         * Previous or next edit command.
-         */
-        public change link;
-        /**
-         * # lines of file 1 changed here.
-         */
-        public int inserted;
-        /**
-         * # lines of file 0 changed here.
-         */
-        public int deleted;
-        /**
          * Line number of 1st deleted line.
          */
         public final int line0;
+
         /**
          * Line number of 1st inserted line.
          */
         public final int line1;
+
+        /**
+         * Previous or next edit command.
+         */
+        public change link;
+
+        /**
+         * # lines of file 1 changed here.
+         */
+        public int inserted;
+
+        /**
+         * # lines of file 0 changed here.
+         */
+        public int deleted;
 
         /**
          * Cons an additional entry onto the front of an edit script OLD.
@@ -518,6 +527,58 @@ public class DiffMyers {
      */
 
     class file_data {
+
+        /**
+         * Number of elements (lines) in this file.
+         */
+        final int buffered_lines;
+
+        /**
+         * Vector, like the previous one except that
+         * the elements for discarded lines have been squeezed out.
+         */
+        final int[] undiscarded;
+
+        /**
+         * Vector mapping virtual line numbers (not counting discarded lines)
+         * to real ones (counting those lines).  Both are origin-0.
+         */
+        final int[] realindexes;
+
+        /**
+         * Vector, indexed by line number, containing an equivalence code for
+         * each line.  It is this vector that is actually compared with that
+         * of another file to generate differences.
+         */
+        private final int[] equivs;
+
+        /**
+         * Total number of nondiscarded lines.
+         */
+        int nondiscarded_lines;
+
+        /**
+         * Array, indexed by real origin-1 line number,
+         * containing true for a line that is an insertion or a deletion.
+         * The results of comparison are stored here.
+         */
+        boolean[] changed_flag;
+
+        file_data(Object[] data, Hashtable<Object, Integer> h) {
+            buffered_lines = data.length;
+
+            equivs = new int[buffered_lines];
+            undiscarded = new int[buffered_lines];
+            realindexes = new int[buffered_lines];
+
+            for (int i = 0; i < data.length; ++i) {
+                Integer ir = h.get(data[i]);
+                if (ir == null)
+                    h.put(data[i], equivs[i] = equiv_max++);
+                else
+                    equivs[i] = ir;
+            }
+        }
 
         /**
          * Allocate changed array for the results of comparison.
@@ -729,22 +790,6 @@ public class DiffMyers {
             nondiscarded_lines = j;
         }
 
-        file_data(Object[] data, Hashtable<Object, Integer> h) {
-            buffered_lines = data.length;
-
-            equivs = new int[buffered_lines];
-            undiscarded = new int[buffered_lines];
-            realindexes = new int[buffered_lines];
-
-            for (int i = 0; i < data.length; ++i) {
-                Integer ir = h.get(data[i]);
-                if (ir == null)
-                    h.put(data[i], equivs[i] = equiv_max++);
-                else
-                    equivs[i] = ir;
-            }
-        }
-
         /**
          * Adjust inserts/deletes of blank lines to join changes
          * as much as possible.
@@ -825,42 +870,6 @@ public class DiffMyers {
                 other_preceding = j;
             }
         }
-
-        /**
-         * Number of elements (lines) in this file.
-         */
-        final int buffered_lines;
-
-        /**
-         * Vector, indexed by line number, containing an equivalence code for
-         * each line.  It is this vector that is actually compared with that
-         * of another file to generate differences.
-         */
-        private final int[] equivs;
-
-        /**
-         * Vector, like the previous one except that
-         * the elements for discarded lines have been squeezed out.
-         */
-        final int[] undiscarded;
-
-        /**
-         * Vector mapping virtual line numbers (not counting discarded lines)
-         * to real ones (counting those lines).  Both are origin-0.
-         */
-        final int[] realindexes;
-
-        /**
-         * Total number of nondiscarded lines.
-         */
-        int nondiscarded_lines;
-
-        /**
-         * Array, indexed by real origin-1 line number,
-         * containing true for a line that is an insertion or a deletion.
-         * The results of comparison are stored here.
-         */
-        boolean[] changed_flag;
 
     }
 

@@ -29,89 +29,52 @@ import java.util.List;
 public class API {
 
     /**
+     * Amount by which to increment each indentation.
+     */
+    public static final int indentInc = 2; //FIXME Why is this static?
+
+    /**
      * The list of all the top-level packages.
      * Each package contains classes, each class contains members, and so on.
      */
-    public List<PackageAPI> packages_; // PackageAPI[]
+    public List<PackageAPI> packages_ = new ArrayList<>();
 
     /**
      * The list of all the classes.
      * This is used to generate the methods and fields which are inherited,
      * rather than storing them in the XML file.
      */
-    public Hashtable<String, ClassAPI> classes_;
+    public Hashtable<String, ClassAPI> classes_ = new Hashtable<>();
 
     /**
      * The String which identifies this API, e.g. &quotSuperProduct 1.3&quot;.
      */
-    public String name_ = null;
+    public String name_;
 
     /**
      * The current package being added to during parsing.
      */
-    public PackageAPI currPkg_ = null;
+    public PackageAPI currPkg_;
+
     /**
      * The current class being added to during parsing.
      */
-    public ClassAPI currClass_ = null;
+    public ClassAPI currClass_;
+
     /**
      * The current constructor being added to during parsing.
      */
-    public ConstructorAPI currCtor_ = null;
+    public ConstructorAPI currCtor_;
+
     /**
      * The current method being added to during parsing.
      */
-    public MethodAPI currMethod_ = null;
+    public MethodAPI currMethod_;
+
     /**
      * The current field being added to during parsing.
      */
-    public FieldAPI currField_ = null;
-
-    /**
-     * Default constructor.
-     */
-    public API() {
-        packages_ = new ArrayList<>(); //PackageAPI[]
-        classes_ = new Hashtable<>(); //ClassAPI
-    }
-
-//
-// Methods to display the contents of an API object.
-//
-
-    /**
-     * Amount by which to increment each indentation.
-     */
-    public static final int indentInc = 2;
-
-    /**
-     * Display the contents of the API object.
-     */
-    public void dump() {
-        int indent = 0;
-        for (PackageAPI packageAPI : packages_) {
-            dumpPackage(packageAPI, indent);
-        }
-    }
-
-    /**
-     * Display the contents of a PackageAPI object.
-     *
-     * @param pkg    The given PackageAPI object.
-     * @param indent The number of spaces to indent the output.
-     */
-    public void dumpPackage(PackageAPI pkg, int indent) {
-        for (int i = 0; i < indent; i++) System.out.print(" ");
-        System.out.println("Package Name: " + pkg.name_);
-        for (ClassAPI classAPI : pkg.classes_) {
-            dumpClass(classAPI, indent + indentInc);
-        }
-        // Display documentation
-        if (pkg.doc_ != null) {
-            System.out.print("Package doc block:");
-            System.out.println("\"" + pkg.doc_ + "\"");
-        }
-    }
+    public FieldAPI currField_;
 
     /**
      * Display the contents of a ClassAPI object.
@@ -189,7 +152,7 @@ public class API {
     public static void dumpCtor(ConstructorAPI c, int indent) {
         for (int i = 0; i < indent; i++) System.out.print(" ");
         System.out.println("Ctor type: " + c.type_);
-        // Display exceptions 
+        // Display exceptions
         System.out.print("exceptions: " + c.exceptions_ + " ");
         // Dump modifiers common to all
         dumpModifiers(c.modifiers_, indent);
@@ -224,7 +187,7 @@ public class API {
             System.out.print("native ");
         if (m.isSynchronized_)
             System.out.print("synchronized ");
-        // Display exceptions 
+        // Display exceptions
         System.out.print("exceptions: " + m.exceptions_ + " ");
         // Dump modifiers common to all
         dumpModifiers(m.modifiers_, indent);
@@ -299,6 +262,7 @@ public class API {
      * character with the
      * string "qUoTe_cHaR".
      */
+    @SuppressWarnings("SpellCheckingInspection")
     public static String hideHTMLTags(String htmlText) {
         StringBuilder sb = new StringBuilder(htmlText);
         int i = 0;
@@ -319,7 +283,7 @@ public class API {
     }
 
     /**
-     * Convert text with stuffed HTML tags ("lEsS_tHaN", etc) into HTML text.
+     * Convert text with stuffed HTML tags ("lEsS_tHaN", etc.) into HTML text.
      */
     public static String showHTMLTags(String text) {
         StringBuilder sb = new StringBuilder(text);
@@ -377,7 +341,7 @@ public class API {
      * <b>NOT USED</b>.
      * <p>
      * Replace all instances of <p> with <p/>. Just for the small number
-     * of HMTL tags which don't require a matching end tag.
+     * of HTML tags which don't require a matching end tag.
      * Also make HTML conform to the simple HTML requirements such as
      * no double hyphens. Double hyphens are replaced by - and the character
      * entity for a hyphen.
@@ -436,5 +400,34 @@ public class API {
             sb.insert(i, ">");
         }
         return sb.toString();
+    }
+
+    /**
+     * Display the contents of the API object.
+     */
+    public void dump() {
+        int indent = 0;
+        for (PackageAPI packageAPI : packages_) {
+            dumpPackage(packageAPI, indent);
+        }
+    }
+
+    /**
+     * Display the contents of a PackageAPI object.
+     *
+     * @param pkg    The given PackageAPI object.
+     * @param indent The number of spaces to indent the output.
+     */
+    public void dumpPackage(PackageAPI pkg, int indent) {
+        for (int i = 0; i < indent; i++) System.out.print(" ");
+        System.out.println("Package Name: " + pkg.name_);
+        for (ClassAPI classAPI : pkg.classes_) {
+            dumpClass(classAPI, indent + indentInc);
+        }
+        // Display documentation
+        if (pkg.doc_ != null) {
+            System.out.print("Package doc block:");
+            System.out.println("\"" + pkg.doc_ + "\"");
+        }
     }
 }

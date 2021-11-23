@@ -26,6 +26,11 @@ package jdiff;
 class MergeChanges {
 
     /**
+     * Set to enable increased logging verbosity for debugging.
+     */
+    private static final boolean trace = false;
+
+    /**
      * Convert some remove and add operations into change operations.
      * <p>
      * Note that if a single thread modifies a collection directly while it is
@@ -196,7 +201,7 @@ class MergeChanges {
                 System.out.println("Error: removed method index not found");
                 System.exit(5);
             }
-            // Find the index of the added method with the same signature, if 
+            // Find the index of the added method with the same signature, if
             // it exists, and make sure it is defined locally.
             int addedIdx = -1;
             for (int i = startAdded; i <= endAdded; i++) {
@@ -324,13 +329,8 @@ class MergeChanges {
                             removedField.name_ +
                             " into one change");
                 }
-            } //if (addedField.inheritedFrom == null) 
+            } //if (addedField.inheritedFrom == null)
         }
     }
-
-    /**
-     * Set to enable increased logging verbosity for debugging.
-     */
-    private static final boolean trace = false;
 
 }

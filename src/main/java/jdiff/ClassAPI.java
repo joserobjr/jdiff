@@ -27,11 +27,6 @@ class ClassAPI implements Comparable<ClassAPI> {
     public boolean isInterface_;
 
     /**
-     * Set if this class is abstract.
-     */
-    boolean isAbstract_;
-
-    /**
      * Modifiers for this class.
      */
     public Modifiers modifiers_;
@@ -44,27 +39,32 @@ class ClassAPI implements Comparable<ClassAPI> {
     /**
      * Interfaces implemented by this class.
      */
-    public List<String> implements_; // String[]
+    public List<String> implements_;
 
     /**
      * Constructors in this class.
      */
-    public List<ConstructorAPI> ctors_; // ConstructorAPI[]
+    public List<ConstructorAPI> ctors_;
 
     /**
      * Methods in this class.
      */
-    public List<MethodAPI> methods_; // MethodAPI[]
+    public List<MethodAPI> methods_;
 
     /**
      * Fields in this class.
      */
-    public List<FieldAPI> fields_; //FieldAPI[]
+    public List<FieldAPI> fields_;
 
     /**
      * The doc block, default is null.
      */
     public String doc_;
+
+    /**
+     * Set if this class is abstract.
+     */
+    boolean isAbstract_;
 
     /**
      * Constructor.

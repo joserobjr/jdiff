@@ -17,6 +17,11 @@ import java.util.List;
 public class HTMLStatistics {
 
     /**
+     * The HTMLReportGenerator instance used to write HTML.
+     */
+    private final HTMLReportGenerator h_;
+
+    /**
      * Constructor.
      */
     public HTMLStatistics(HTMLReportGenerator h) {
@@ -24,16 +29,11 @@ public class HTMLStatistics {
     }
 
     /**
-     * The HTMLReportGenerator instance used to write HTML.
-     */
-    private HTMLReportGenerator h_;
-
-    /**
      * Emit the statistics HTML file.
      */
     public void emitStatistics(String filename, APIDiff apiDiff) {
-        try(FileOutputStream fos = new FileOutputStream(filename);
-            PrintWriter writer = new PrintWriter(fos)
+        try (FileOutputStream fos = new FileOutputStream(filename);
+             PrintWriter writer = new PrintWriter(fos)
         ) {
             HTMLReportGenerator.reportFile = writer;
             // Write out the HTML header
@@ -209,7 +209,7 @@ public class HTMLStatistics {
     public void emitClassesByDiff(APIDiff apiDiff) {
         // Add all the changed classes to a list
         List<ClassDiff> allChangedClasses = new ArrayList<>();
-        for (PackageDiff pkg: apiDiff.packagesChanged) {
+        for (PackageDiff pkg : apiDiff.packagesChanged) {
             if (pkg.classesChanged != null) {
                 // Add the package name to the class name
                 List<ClassDiff> cc = new ArrayList<>(pkg.classesChanged);

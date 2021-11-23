@@ -20,6 +20,21 @@ import java.io.FileInputStream;
 public class XMLToAPI {
 
     /**
+     * If set, then store and display the whole qualified name of exceptions.
+     * If not set, then store and display just the name of the exception,
+     * which is shorter, but may not detect when an exception changes class,
+     * but retains the same name.
+     */
+    private static final boolean showExceptionTypes = true;
+
+    /**
+     * If set, validate the XML which represents an API. By default, this is
+     * not set for reasons of efficiency, and also because if JDiff generated
+     * the XML, it should not need validating.
+     */
+    public static boolean validateXML;
+
+    /**
      * The instance of the API object which is populated from the file.
      */
     private static API api_;
@@ -42,7 +57,7 @@ public class XMLToAPI {
      */
     public static API readFile(String filename, boolean createGlobalComments,
                                String apiName) {
-        // The instance of the API object which is populated from the file. 
+        // The instance of the API object which is populated from the file.
         api_ = new API();
         api_.name_ = apiName; // Checked later
         try {
@@ -53,7 +68,7 @@ public class XMLToAPI {
                 if (parserName == null) {
                     parser = org.xml.sax.helpers.XMLReaderFactory.createXMLReader("org.apache.xerces.parsers.SAXParser");
                 } else {
-                    // Let the underlying mechanisms try to work out which 
+                    // Let the underlying mechanisms try to work out which
                     // class to instantiate
                     parser = org.xml.sax.helpers.XMLReaderFactory.createXMLReader();
                 }
@@ -179,10 +194,6 @@ public class XMLToAPI {
         }
     }
 
-//
-// Methods to add data to an API object. Called by the XML parser.
-//
-
     /**
      * Set the name of the API object.
      *
@@ -193,7 +204,7 @@ public class XMLToAPI {
             System.out.println("Error: no API identifier found in the XML file '" + api_.name_ + "'");
             System.exit(3);
         }
-        // Check the given name against the filename currently stored in 
+        // Check the given name against the filename currently stored in
         // the name_ field
         String filename2 = name.replace(' ', '_');
         filename2 += ".xml";
@@ -348,19 +359,4 @@ public class XMLToAPI {
                 api_.currCtor_.exceptions_ += ", " + exceptionId;
         }
     }
-
-    /**
-     * If set, validate the XML which represents an API. By default, this is
-     * not set for reasons of efficiency, and also because if JDiff generated
-     * the XML, it should not need validating.
-     */
-    public static boolean validateXML;
-
-    /**
-     * If set, then store and display the whole qualified name of exceptions.
-     * If not set, then store and display just the name of the exception,
-     * which is shorter, but may not detect when an exception changes class,
-     * but retains the same name.
-     */
-    private static final boolean showExceptionTypes = true;
 }  

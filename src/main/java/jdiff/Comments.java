@@ -20,6 +20,12 @@ import java.util.*;
 public class Comments {
 
     /**
+     * The text placed into XML comments file where there is no comment yet.
+     * It never appears in reports.
+     */
+    public static final String placeHolderText = "InsertCommentsHere";
+
+    /**
      * All the possible comments known about, accessible by the commentID.
      */
     public static Hashtable<String, String> allPossibleComments = new Hashtable<>();
@@ -30,14 +36,19 @@ public class Comments {
     private static Comments oldComments_;
 
     /**
-     * Default constructor.
+     * The file where the XML representing the new Comments object is stored.
      */
-    public Comments() {
-        commentsList_ = new ArrayList<>(); // SingleComment[]
-    }
+    private static PrintWriter outputFile = null;
 
-    // The list of comments elements associated with this objects
-    public List<SingleComment> commentsList_; // SingleComment[]
+    /**
+     * The list of comments elements associated with this objects
+     */
+    public List<SingleComment> commentsList_ = new ArrayList<>();
+
+//
+// Methods to add data to a Comments object. Called by the XML parser and the 
+// report generator.
+//
 
     /**
      * Read the file where the XML for comments about the changes between
@@ -45,7 +56,7 @@ public class Comments {
      * it. The Comments object may be null if no file exists.
      */
     public static Comments readFile(String filename) {
-        // If validation is desired, write out the appropriate comments.xsd 
+        // If validation is desired, write out the appropriate comments.xsd
         // file in the same directory as the comments XML file.
         if (XMLToAPI.validateXML) {
             writeXSD(filename);
@@ -56,7 +67,7 @@ public class Comments {
         if (!f.exists())
             return null;
 
-        // The instance of the Comments object which is populated from the file. 
+        // The instance of the Comments object which is populated from the file.
         oldComments_ = new Comments();
         try {
             DefaultHandler handler = new CommentsHandler(oldComments_);
@@ -66,7 +77,7 @@ public class Comments {
                 if (parserName == null) {
                     parser = org.xml.sax.helpers.XMLReaderFactory.createXMLReader("org.apache.xerces.parsers.SAXParser");
                 } else {
-                    // Let the underlying mechanisms try to work out which 
+                    // Let the underlying mechanisms try to work out which
                     // class to instantiate
                     parser = org.xml.sax.helpers.XMLReaderFactory.createXMLReader();
                 }
@@ -107,6 +118,10 @@ public class Comments {
         Collections.sort(oldComments_.commentsList_);
         return oldComments_;
     } //readFile()
+
+//
+// Methods to get data from a Comments object. Called by the report generator
+//
 
     /**
      * Write the XML Schema file used for validation.
@@ -167,29 +182,6 @@ public class Comments {
             System.exit(1);
         }
     }
-
-//
-// Methods to add data to a Comments object. Called by the XML parser and the 
-// report generator.
-//
-
-    /**
-     * Add the SingleComment object to the list of comments kept by this
-     * object.
-     */
-    public void addComment(SingleComment comment) {
-        commentsList_.add(comment);
-    }
-
-//
-// Methods to get data from a Comments object. Called by the report generator
-//
-
-    /**
-     * The text placed into XML comments file where there is no comment yet.
-     * It never appears in reports.
-     */
-    public static final String placeHolderText = "InsertCommentsHere";
 
     /**
      * Return the comment associated with the given id in the Comment object.
@@ -369,10 +361,6 @@ public class Comments {
         return result.toString();
     }
 
-//
-// Methods to write a Comments object out to a file.
-//
-
     /**
      * Write the XML representation of comments to a file.
      *
@@ -395,6 +383,62 @@ public class Comments {
             System.exit(1);
         }
         return true;
+    }
+
+    /**
+     * Emit messages about which comments are now unused and which are new.
+     */
+    public static void noteDifferences(Comments oldComments, Comments newComments) {
+        if (oldComments == null) {
+            System.out.println("Note: all the comments have been newly generated");
+            return;
+        }
+
+        // See which comment ids are no longer used and add those entries to
+        // the new comments, marking them as unused.
+        for (SingleComment oldComment : oldComments.commentsList_) {
+            int idx = Collections.binarySearch(newComments.commentsList_, oldComment);
+            if (idx < 0) {
+                System.out.println("Warning: comment \"" + oldComment.id_ + "\" is no longer used.");
+                oldComment.isUsed_ = false;
+                newComments.commentsList_.add(oldComment);
+            }
+        }
+
+    }
+
+    /**
+     * Return true if the given HTML tag has no separate </tag> end element.
+     * <p>
+     * If you want to be able to use sloppy HTML in your comments, then you can
+     * add the element, e.g. li back into the condition here. However, if you
+     * then become more careful and do provide the closing tag, the output is
+     * generally just the closing tag, which is incorrect.
+     * <p>
+     * tag.equalsIgnoreCase("tr") || // Is sometimes minimized
+     * tag.equalsIgnoreCase("th") || // Is sometimes minimized
+     * tag.equalsIgnoreCase("td") || // Is sometimes minimized
+     * tag.equalsIgnoreCase("dt") || // Is sometimes minimized
+     * tag.equalsIgnoreCase("dd") || // Is sometimes minimized
+     * tag.equalsIgnoreCase("img") || // Is sometimes minimized
+     * tag.equalsIgnoreCase("code") || // Is sometimes minimized (error)
+     * tag.equalsIgnoreCase("font") || // Is sometimes minimized (error)
+     * tag.equalsIgnoreCase("ul") || // Is sometimes minimized
+     * tag.equalsIgnoreCase("ol") || // Is sometimes minimized
+     * tag.equalsIgnoreCase("li") // Is sometimes minimized
+     */
+    public static boolean isMinimizedTag(String tag) {
+        return tag.equalsIgnoreCase("p") ||
+                tag.equalsIgnoreCase("br") ||
+                tag.equalsIgnoreCase("hr");
+    }
+
+    /**
+     * Add the SingleComment object to the list of comments kept by this
+     * object.
+     */
+    public void addComment(SingleComment comment) {
+        commentsList_.add(comment);
     }
 
     /**
@@ -429,28 +473,6 @@ public class Comments {
             System.out.println("text = \"" + currComment.text_ + "\"");
             System.out.println("isUsed = " + currComment.isUsed_);
         }
-    }
-
-    /**
-     * Emit messages about which comments are now unused and which are new.
-     */
-    public static void noteDifferences(Comments oldComments, Comments newComments) {
-        if (oldComments == null) {
-            System.out.println("Note: all the comments have been newly generated");
-            return;
-        }
-
-        // See which comment ids are no longer used and add those entries to 
-        // the new comments, marking them as unused.
-        for (SingleComment oldComment : oldComments.commentsList_) {
-            int idx = Collections.binarySearch(newComments.commentsList_, oldComment);
-            if (idx < 0) {
-                System.out.println("Warning: comment \"" + oldComment.id_ + "\" is no longer used.");
-                oldComment.isUsed_ = false;
-                newComments.commentsList_.add(oldComment);
-            }
-        }
-
     }
 
     /**
@@ -491,37 +513,6 @@ public class Comments {
         outputFile.println();
         outputFile.println("</comments>");
     }
-
-    /**
-     * Return true if the given HTML tag has no separate </tag> end element.
-     * <p>
-     * If you want to be able to use sloppy HTML in your comments, then you can
-     * add the element, e.g. li back into the condition here. However, if you
-     * then become more careful and do provide the closing tag, the output is
-     * generally just the closing tag, which is incorrect.
-     * <p>
-     * tag.equalsIgnoreCase("tr") || // Is sometimes minimized
-     * tag.equalsIgnoreCase("th") || // Is sometimes minimized
-     * tag.equalsIgnoreCase("td") || // Is sometimes minimized
-     * tag.equalsIgnoreCase("dt") || // Is sometimes minimized
-     * tag.equalsIgnoreCase("dd") || // Is sometimes minimized
-     * tag.equalsIgnoreCase("img") || // Is sometimes minimized
-     * tag.equalsIgnoreCase("code") || // Is sometimes minimized (error)
-     * tag.equalsIgnoreCase("font") || // Is sometimes minimized (error)
-     * tag.equalsIgnoreCase("ul") || // Is sometimes minimized
-     * tag.equalsIgnoreCase("ol") || // Is sometimes minimized
-     * tag.equalsIgnoreCase("li") // Is sometimes minimized
-     */
-    public static boolean isMinimizedTag(String tag) {
-        return tag.equalsIgnoreCase("p") ||
-                tag.equalsIgnoreCase("br") ||
-                tag.equalsIgnoreCase("hr");
-    }
-
-    /**
-     * The file where the XML representing the new Comments object is stored.
-     */
-    private static PrintWriter outputFile = null;
 
 }
 

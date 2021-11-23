@@ -15,16 +15,16 @@ import java.io.PrintWriter;
 public class HTMLFiles {
 
     /**
+     * The HTMLReportGenerator instance used to write HTML.
+     */
+    private final HTMLReportGenerator h_;
+
+    /**
      * Constructor.
      */
     public HTMLFiles(HTMLReportGenerator h) {
         h_ = h;
     }
-
-    /**
-     * The HTMLReportGenerator instance used to write HTML.
-     */
-    private HTMLReportGenerator h_;
 
     /**
      * Emit the top-level changes.html frames file where everything starts.
@@ -86,8 +86,8 @@ public class HTMLFiles {
      * Emit a top left frame with all the links to the index files.
      */
     public void emitTopLeftFile(String tlf) {
-        try(FileOutputStream fos = new FileOutputStream(tlf);
-            PrintWriter writer = new PrintWriter(fos)
+        try (FileOutputStream fos = new FileOutputStream(tlf);
+             PrintWriter writer = new PrintWriter(fos)
         ) {
             HTMLReportGenerator.reportFile = writer;
             h_.writeStartHTMLHeader();
@@ -282,8 +282,8 @@ public class HTMLFiles {
         String stylesheetFileName = "stylesheet-jdiff.css";
         if (HTMLReportGenerator.outputDir != null)
             stylesheetFileName = HTMLReportGenerator.outputDir + JDiff.DIR_SEP + stylesheetFileName;
-        try(FileOutputStream fos = new FileOutputStream(stylesheetFileName);
-            PrintWriter writer = new PrintWriter(fos);
+        try (FileOutputStream fos = new FileOutputStream(stylesheetFileName);
+             PrintWriter writer = new PrintWriter(fos)
         ) {
             HTMLReportGenerator.reportFile = writer;
             h_.writeText();

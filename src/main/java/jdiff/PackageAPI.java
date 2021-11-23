@@ -24,7 +24,7 @@ class PackageAPI implements Comparable<PackageAPI> {
     /**
      * Classes within this package.
      */
-    public List<ClassAPI> classes_;  // ClassAPI[]
+    public List<ClassAPI> classes_ = new ArrayList<>();
 
     /**
      * The doc block, default is null.
@@ -36,7 +36,6 @@ class PackageAPI implements Comparable<PackageAPI> {
      */
     public PackageAPI(String name) {
         name_ = name;
-        classes_ = new ArrayList<>(); // ClassAPI[]
     }
 
     /**

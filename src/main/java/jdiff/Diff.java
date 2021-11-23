@@ -15,6 +15,66 @@ import java.util.*;
 class Diff {
 
     /**
+     * Define the type of emphasis for deleted words.
+     * 0 strikes the words through.
+     * 1 outlines the words in light grey.
+     */
+    public static final int DELETE_EFFECT = 0;
+
+    /**
+     * Define the type of emphasis for inserted words.
+     * 0 colors the words red.
+     * 1 outlines the words in yellow, like a highlighter.
+     */
+    public static final int INSERT_EFFECT = 1;
+
+    /**
+     * The list of documentation differences.
+     */
+    private static final List<DiffOutput> docDiffs = new ArrayList<>(); //FIXME Why is this static?
+
+    /**
+     * Set to enable increased logging verbosity for debugging.
+     */
+    private static final boolean TRACE = false;
+
+    /**
+     * Current file where documentation differences are written as colored
+     * differences.
+     */
+    public static PrintWriter diffFile;
+
+    /**
+     * Base name of the current file where documentation differences are
+     * written as colored differences.
+     */
+    public static String diffFileName = "docdiffs_";
+
+    /**
+     * If set, then do not generate colored diffs for documentation.
+     * Default is true.
+     */
+    public static boolean noDocDiffs = true;
+
+    /**
+     * For each package and class, the first DiffOutput is added to
+     * this hash table. Used when generating navigation bars.
+     */
+    public static Hashtable<String, String> firstDiffOutput = new Hashtable<>();
+
+    /**
+     * If set, then show changes in implementation-related modifiers such as
+     * native and synchronized. For more information, see
+     * http://java.sun.com/j2se/1.4.1/docs/tooldocs/solaris/javadoc.html#generatedapideclarations
+     */
+    public static boolean showAllChanges = false;
+
+    /**
+     * The name of the current package, used to create diffFileName.
+     */
+    private static String currPkgName = null;
+
+    /**
      * Save the differences between the two strings in a DiffOutput object
      * for later use.
      *
@@ -31,7 +91,7 @@ class Diff {
             return "Documentation changed from ";
         }
 
-        // Generate the differences. 
+        // Generate the differences.
         generateDiffs(pkgName, className, oldDoc, newDoc, id, title);
 
         return "Documentation <a href=\"" + diffFileName + pkgName +
@@ -52,7 +112,7 @@ class Diff {
         DiffMyers.change script = diff.diff_2(false);
         script = mergeDiffs(oldDocWords, newDocWords, script);
         String text = "<A NAME=\"" + id + "\"></A>" + title + "<br><br>";
-        // Generate the differences in blockquotes to cope with unterminated 
+        // Generate the differences in blockquotes to cope with unterminated
         // HTML tags
         text += "<blockquote>";
         text = addDiffs(oldDocWords, newDocWords, script, text);
@@ -168,7 +228,7 @@ class Diff {
         StringBuilder res = new StringBuilder(text);
         DiffMyers.change hunk = script;
         int startOld = 0;
-        if (trace) {
+        if (TRACE) {
             System.out.println("Old Text:");
             for (String oldDocWord : oldDocWords) {
                 System.out.print(oldDocWord);
@@ -188,7 +248,7 @@ class Diff {
                 continue; // Not clear how this would occur, but handle it
             }
 
-            // Determine the range of word and delimiter numbers involved 
+            // Determine the range of word and delimiter numbers involved
             // in each file.
             int first0 = hunk.line0; // Index of first deleted word
             // Index of last deleted word, invalid if deletes == 0
@@ -197,7 +257,7 @@ class Diff {
             // Index of last inserted word, invalid if inserts == 0
             int last1 = hunk.line1 + hunk.inserted - 1;
 
-            if (trace) {
+            if (TRACE) {
                 System.out.println("HUNK: ");
                 System.out.println("inserts: " + inserts);
                 System.out.println("deletes: " + deletes);
@@ -221,9 +281,9 @@ class Diff {
                     if (!oldDocWords[i].startsWith("<") &&
                             !oldDocWords[i].endsWith(">")) {
                         if (!inStrike) {
-                            if (deleteEffect == 0)
+                            if (DELETE_EFFECT == 0)
                                 res.append("<strike>");
-                            else if (deleteEffect == 1)
+                            else if (DELETE_EFFECT == 1)
                                 res.append("<span style=\"background: #FFCCCC\">");
                             inStrike = true;
                         }
@@ -231,9 +291,9 @@ class Diff {
                     }
                 }
                 if (inStrike) {
-                    if (deleteEffect == 0)
+                    if (DELETE_EFFECT == 0)
                         res.append("</strike>");
-                    else if (deleteEffect == 1)
+                    else if (DELETE_EFFECT == 1)
                         res.append("</span>");
                 }
             }
@@ -244,9 +304,9 @@ class Diff {
                     if (!newDocWords[i].startsWith("<") &&
                             !newDocWords[i].endsWith(">")) {
                         if (!inEmph) {
-                            if (insertEffect == 0)
+                            if (INSERT_EFFECT == 0)
                                 res.append("<font color=\"red\">");
-                            else if (insertEffect == 1)
+                            else if (INSERT_EFFECT == 1)
                                 res.append("<span style=\"background: #FFFF00\">");
                             inEmph = true;
                         }
@@ -254,9 +314,9 @@ class Diff {
                     res.append(newDocWords[i]);
                 }
                 if (inEmph) {
-                    if (insertEffect == 0)
+                    if (INSERT_EFFECT == 0)
                         res.append("</font>");
-                    else if (insertEffect == 1)
+                    else if (INSERT_EFFECT == 1)
                         res.append("</span>");
                 }
             }
@@ -385,13 +445,13 @@ class Diff {
                     diffFile.println();
                     diffFile.println("<blockquote>");
                     diffFile.println("This file contains all the changes in documentation in the package <code>" + currPkgName + "</code> as colored differences.");
-                    if (deleteEffect == 0)
+                    if (DELETE_EFFECT == 0)
                         diffFile.println("Deletions are shown <strike>like this</strike>, and");
-                    else if (deleteEffect == 1)
+                    else if (DELETE_EFFECT == 1)
                         diffFile.println("Deletions are shown <span style=\"background: #FFCCCC\">like this</span>, and");
-                    if (insertEffect == 0)
+                    if (INSERT_EFFECT == 0)
                         diffFile.println("additions are shown in red <font color=\"red\">like this</font>.");
-                    else if (insertEffect == 1)
+                    else if (INSERT_EFFECT == 1)
                         diffFile.println("additions are shown <span style=\"background: #FFFF00\">like this</span>.");
                     diffFile.println("</blockquote>");
 
@@ -597,65 +657,5 @@ class Diff {
             diffFile.close();
         }
     }
-
-    /**
-     * Current file where documentation differences are written as colored
-     * differences.
-     */
-    public static PrintWriter diffFile = null;
-
-    /**
-     * Base name of the current file where documentation differences are
-     * written as colored differences.
-     */
-    public static String diffFileName = "docdiffs_";
-
-    /**
-     * The name of the current package, used to create diffFileName.
-     */
-    private static String currPkgName = null;
-
-    /**
-     * If set, then do not generate colored diffs for documentation.
-     * Default is true.
-     */
-    public static boolean noDocDiffs = true;
-
-    /**
-     * Define the type of emphasis for deleted words.
-     * 0 strikes the words through.
-     * 1 outlines the words in light grey.
-     */
-    public static int deleteEffect = 0;
-
-    /**
-     * Define the type of emphasis for inserted words.
-     * 0 colors the words red.
-     * 1 outlines the words in yellow, like a highlighter.
-     */
-    public static int insertEffect = 1;
-
-    /**
-     * For each package and class, the first DiffOutput is added to
-     * this hash table. Used when generating navigation bars.
-     */
-    public static Hashtable<String, String> firstDiffOutput = new Hashtable<>();
-
-    /**
-     * If set, then show changes in implementation-related modifiers such as
-     * native and synchronized. For more information, see
-     * http://java.sun.com/j2se/1.4.1/docs/tooldocs/solaris/javadoc.html#generatedapideclarations
-     */
-    public static boolean showAllChanges = false;
-
-    /**
-     * The list of documentation differences.
-     */
-    private static final List<DiffOutput> docDiffs = new ArrayList<>(); // DiffOutput[]
-
-    /**
-     * Set to enable increased logging verbosity for debugging.
-     */
-    private static final boolean trace = false;
 
 }  

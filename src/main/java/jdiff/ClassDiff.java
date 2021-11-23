@@ -45,10 +45,12 @@ class ClassDiff {
      * Constructors added in the new API.
      */
     public List<ConstructorAPI> ctorsAdded;
+
     /**
      * Constructors removed in the new API.
      */
     public List<ConstructorAPI> ctorsRemoved;
+
     /**
      * Constructors changed in the new API.
      */
@@ -58,10 +60,12 @@ class ClassDiff {
      * Methods added in the new API.
      */
     public List<MethodAPI> methodsAdded;
+
     /**
      * Methods removed in the new API.
      */
     public List<MethodAPI> methodsRemoved;
+
     /**
      * Methods changed in the new API.
      */
@@ -71,10 +75,12 @@ class ClassDiff {
      * Fields added in the new API.
      */
     public List<FieldAPI> fieldsAdded;
+
     /**
      * Fields removed in the new API.
      */
     public List<FieldAPI> fieldsRemoved;
+
     /**
      * Fields changed in the new API.
      */

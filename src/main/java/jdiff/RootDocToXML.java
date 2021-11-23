@@ -18,6 +18,92 @@ import java.util.*;
 public class RootDocToXML {
 
     /**
+     * Set to enable increased logging verbosity for debugging.
+     */
+    private static final boolean trace = false;
+
+    /**
+     * The name of the file where the XML representing the API will be
+     * stored.
+     */
+    public static String outputFileName;
+
+    /**
+     * The identifier of the API being written out in XML, e.g.
+     * &quotSuperProduct 1.3&quot;.
+     */
+    public static String apiIdentifier;
+
+    /**
+     * The name of the directory where the XML representing the API will be
+     * stored.
+     */
+    public static String outputDirectory;
+
+    /**
+     * Do not display a class  with a lower level of visibility than this.
+     * Default is to display all public and protected classes.
+     */
+    public static String classVisibilityLevel = "protected";
+
+    /**
+     * Do not display a member with a lower level of visibility than this.
+     * Default is to display all public and protected members
+     * (constructors, methods, fields).
+     */
+    public static String memberVisibilityLevel = "protected";
+
+    /**
+     * If set, then save the entire contents of a doc block comment in the
+     * API file. If not set, then just save the first sentence. Default is
+     * that this is set.
+     */
+    public static boolean saveAllDocs = true;
+
+    /**
+     * If set, exclude program elements marked with whatever the exclude tag
+     * is specified as, e.g. "@exclude".
+     */
+    public static boolean doExclude;
+
+    /**
+     * Exclude program elements marked with this String, e.g. "@exclude".
+     */
+    public static String excludeTag;
+
+    /**
+     * The base URI for locating necessary DTDs and Schemas. By default, this
+     * is "http://www.w3.org". A typical value to use local copies of DTD files
+     * might be "file:///C:/jdiff/lib"
+     */
+    public static String baseURI = "http://www.w3.org";
+
+    /**
+     * If set, then strip out non-printing characters from documentation.
+     * Default is that this is set.
+     */
+    static boolean stripNonPrintables = true;
+
+    /**
+     * If set, then add the information about the source file and line number
+     * which is available in J2SE1.4. Default is that this is not set.
+     */
+    static boolean addSrcInfo;
+
+    /**
+     * If set, scan classes with no packages.
+     * If the source is  a jar file this may duplicates classes, so
+     * disable it using the -packagesonly option. Default is that this is
+     * not set.
+     */
+    static boolean packagesOnly;
+
+    /**
+     * The file where the XML representing the API will be stored.
+     */
+    private static PrintWriter outputFile;
+
+    /**
      * Default constructor.
      */
     public RootDocToXML() {
@@ -40,7 +126,7 @@ public class RootDocToXML {
 
         try (FileOutputStream fos = new FileOutputStream(tempFileName);
              PrintWriter writer = new PrintWriter(fos)
-        ){
+        ) {
             outputFile = writer;
             System.out.println("JDiff: writing the API to file '" + tempFileName + "'...");
             if (root.specifiedPackages().length != 0 || root.specifiedClasses().length != 0) {
@@ -87,8 +173,8 @@ public class RootDocToXML {
                 xsdFileName += JDiff.DIR_SEP;
         }
         xsdFileName += "api.xsd";
-        try(FileOutputStream fos = new FileOutputStream(xsdFileName);
-            PrintWriter xsdFile = new PrintWriter(fos)
+        try (FileOutputStream fos = new FileOutputStream(xsdFileName);
+             PrintWriter xsdFile = new PrintWriter(fos)
         ) {
             // The contents of the api.xsd file
             xsdFile.println("<?xml version=\"1.0\" encoding=\"iso-8859-1\" standalone=\"no\"?>");
@@ -207,6 +293,122 @@ public class RootDocToXML {
             System.out.println("Error: " + e.getMessage());
             System.exit(1);
         }
+    }
+
+    /**
+     * Find the index of the end of the first sentence in the given text,
+     * when writing out to an XML file.
+     * This is an extended version of the algorithm used by the DocCheck
+     * Javadoc doclet. It checks for @tags too.
+     *
+     * @param text The text to be searched.
+     * @return The index of the end of the first sentence. If there is no
+     * end, return -1. If there is no useful text, return 0.
+     * If the whole doc block comment is wanted (default), return -1.
+     */
+    public static int endOfFirstSentence(String text) {
+        return endOfFirstSentence(text, true);
+    }
+
+    /**
+     * Find the index of the end of the first sentence in the given text.
+     * This is an extended version of the algorithm used by the DocCheck
+     * Javadoc doclet. It checks for &#064;tags too.
+     *
+     * @param text         The text to be searched.
+     * @param writingToXML Set to true when writing out XML.
+     * @return The index of the end of the first sentence. If there is no
+     * end, return -1. If there is no useful text, return 0.
+     * If the whole doc block comment is wanted (default), return -1.
+     */
+    public static int endOfFirstSentence(String text, boolean writingToXML) {
+        if (saveAllDocs && writingToXML)
+            return -1;
+        int textLen = text.length();
+        if (textLen == 0)
+            return 0;
+        int index = -1;
+        // Handle some special cases
+        int fromindex = 0;
+        int ellipsis = text.indexOf(". . ."); // Handles one instance of this
+        if (ellipsis != -1)
+            fromindex = ellipsis + 5;
+        // If the first non-whitespace character is an @, go beyond it
+        int i = 0;
+        while (i < textLen && text.charAt(i) == ' ') {
+            i++;
+        }
+        if (text.charAt(i) == '@' && fromindex < textLen - 1)
+            fromindex = i + 1;
+        // Use the brute force approach.
+        index = minIndex(index, text.indexOf("? ", fromindex));
+        index = minIndex(index, text.indexOf("?\t", fromindex));
+        index = minIndex(index, text.indexOf("?\n", fromindex));
+        index = minIndex(index, text.indexOf("?\r", fromindex));
+        index = minIndex(index, text.indexOf("?\f", fromindex));
+        index = minIndex(index, text.indexOf("! ", fromindex));
+        index = minIndex(index, text.indexOf("!\t", fromindex));
+        index = minIndex(index, text.indexOf("!\n", fromindex));
+        index = minIndex(index, text.indexOf("!\r", fromindex));
+        index = minIndex(index, text.indexOf("!\f", fromindex));
+        index = minIndex(index, text.indexOf(". ", fromindex));
+        index = minIndex(index, text.indexOf(".\t", fromindex));
+        index = minIndex(index, text.indexOf(".\n", fromindex));
+        index = minIndex(index, text.indexOf(".\r", fromindex));
+        index = minIndex(index, text.indexOf(".\f", fromindex));
+        index = minIndex(index, text.indexOf("@param", fromindex));
+        index = minIndex(index, text.indexOf("@return", fromindex));
+        index = minIndex(index, text.indexOf("@throw", fromindex));
+        index = minIndex(index, text.indexOf("@serial", fromindex));
+        index = minIndex(index, text.indexOf("@exception", fromindex));
+        index = minIndex(index, text.indexOf("@deprecate", fromindex));
+        index = minIndex(index, text.indexOf("@author", fromindex));
+        index = minIndex(index, text.indexOf("@since", fromindex));
+        index = minIndex(index, text.indexOf("@see", fromindex));
+        index = minIndex(index, text.indexOf("@version", fromindex));
+        if (doExclude && excludeTag != null)
+            index = minIndex(index, text.indexOf(excludeTag));
+        index = minIndex(index, text.indexOf("@vtexclude", fromindex));
+        index = minIndex(index, text.indexOf("@vtinclude", fromindex));
+        index = minIndex(index, text.indexOf("<p>", 2)); // Not at start
+        index = minIndex(index, text.indexOf("<P>", 2)); // Not at start
+        index = minIndex(index, text.indexOf("<blockquote", 2));  // Not at start
+        index = minIndex(index, text.indexOf("<pre", fromindex)); // May contain anything!
+        // Avoid the char at the start of a tag in some cases
+        if (index != -1 &&
+                (text.charAt(index) == '@' || text.charAt(index) == '<')) {
+            if (index != 0)
+                index--;
+        }
+
+/* Not used for jdiff, since tags are explicitly checked for above.
+        // Look for a sentence terminated by an HTML tag.
+        index = minIndex(index, text.indexOf(".<", fromindex));
+        if (index == -1) {
+            // If period-whitespace etc was not found, check to see if
+            // last character is a period,
+            int endIndex = text.length()-1;
+            if (text.charAt(endIndex) == '.' ||
+                text.charAt(endIndex) == '?' ||
+                text.charAt(endIndex) == '!')
+                index = endIndex;
+        }
+*/
+        return index;
+    }
+
+    /**
+     * Return the minimum of two indexes if > -1, and return -1
+     * only if both indexes = -1.
+     *
+     * @param i an int index
+     * @param j an int index
+     * @return an int equal to the minimum index > -1, or -1
+     */
+    public static int minIndex(int i, int j) {
+        if (i == -1) return j;
+        if (j == -1) return i;
+        return Math.min(i, j);
     }
 
     /**
@@ -346,7 +548,7 @@ public class RootDocToXML {
               ClassDoc[] ic = cd[i].innerClasses();
               for (int k = 0; k < ic.length; k++) {
               System.out.println("Inner class " + k + ", name = " + ic[k].name());
-              } 
+              }
             */
         }//for
     }//processClasses()
@@ -677,7 +879,7 @@ public class RootDocToXML {
      * @return boolean Set if this element is shown.
      */
     public boolean shownElement(Doc doc, String visLevel) {
-        // If a doc block contains @exclude or a similar such tag, 
+        // If a doc block contains @exclude or a similar such tag,
         // then don't display it.
         if (doExclude && excludeTag != null && doc != null) {
             String rct = doc.getRawCommentText();
@@ -694,7 +896,7 @@ public class RootDocToXML {
         }
         if (visLevel.compareTo("private") == 0)
             return true;
-        // Show all that is not private 
+        // Show all that is not private
         if (visLevel.compareTo("package") == 0)
             return !ped.isPrivate();
         // Show all that is not private or package
@@ -768,13 +970,13 @@ public class RootDocToXML {
             // Ranges from http://www.unicode.org/unicode/reports/tr20/
             // Should really replace 0x2028 and  0x2029 with <br/>
             if (val == 0x0 ||
-                inRange(val, 0x2028, 0x2029) || 
-                inRange(val, 0x202A, 0x202E) || 
-                inRange(val, 0x206A, 0x206F) || 
-                inRange(val, 0xFFF9, 0xFFFC) || 
+                inRange(val, 0x2028, 0x2029) ||
+                inRange(val, 0x202A, 0x202E) ||
+                inRange(val, 0x206A, 0x206F) ||
+                inRange(val, 0xFFF9, 0xFFFC) ||
                 inRange(val, 0xE0000, 0xE007F)) {
                 if (trace) {
-                    System.out.println("Warning: changed non-printing character  " + sa[i] + " in " + doc.name()); 
+                    System.out.println("Warning: changed non-printing character  " + sa[i] + " in " + doc.name());
                 }
                 sa[i] = '#';
             }
@@ -866,7 +1068,7 @@ public class RootDocToXML {
             }
             filename = filename.replace('.', JDiff.DIR_SEP.charAt(0));
             if (srcLocation != null) {
-                // Make a relative location absolute 
+                // Make a relative location absolute
                 if (srcLocation.startsWith("..")) {
                     String curDir = System.getProperty("user.dir");
                     while (srcLocation.startsWith("..")) {
@@ -884,7 +1086,7 @@ public class RootDocToXML {
             if (!f2.exists()) {
                 filename += "l";
             }
-            try(FileInputStream f = new FileInputStream(filename)) {
+            try (FileInputStream f = new FileInputStream(filename)) {
                 BufferedReader d = new BufferedReader(new InputStreamReader(f));
                 String str = d.readLine();
                 // Ignore everything except the lines between <body> elements
@@ -909,7 +1111,7 @@ public class RootDocToXML {
                         rctBuilder.append(str).append("\n");
                     str = d.readLine();
                 }
-                rct = rctBuilder != null? rctBuilder.toString() : null;
+                rct = rctBuilder != null ? rctBuilder.toString() : null;
             }
         } catch (java.io.FileNotFoundException e) {
             // If it doesn't exist, that's fine
@@ -939,207 +1141,5 @@ public class RootDocToXML {
             }
         }
     }
-
-    /**
-     * Find the index of the end of the first sentence in the given text,
-     * when writing out to an XML file.
-     * This is an extended version of the algorithm used by the DocCheck
-     * Javadoc doclet. It checks for @tags too.
-     *
-     * @param text The text to be searched.
-     * @return The index of the end of the first sentence. If there is no
-     * end, return -1. If there is no useful text, return 0.
-     * If the whole doc block comment is wanted (default), return -1.
-     */
-    public static int endOfFirstSentence(String text) {
-        return endOfFirstSentence(text, true);
-    }
-
-    /**
-     * Find the index of the end of the first sentence in the given text.
-     * This is an extended version of the algorithm used by the DocCheck
-     * Javadoc doclet. It checks for &#064;tags too.
-     *
-     * @param text         The text to be searched.
-     * @param writingToXML Set to true when writing out XML.
-     * @return The index of the end of the first sentence. If there is no
-     * end, return -1. If there is no useful text, return 0.
-     * If the whole doc block comment is wanted (default), return -1.
-     */
-    public static int endOfFirstSentence(String text, boolean writingToXML) {
-        if (saveAllDocs && writingToXML)
-            return -1;
-        int textLen = text.length();
-        if (textLen == 0)
-            return 0;
-        int index = -1;
-        // Handle some special cases
-        int fromindex = 0;
-        int ellipsis = text.indexOf(". . ."); // Handles one instance of this
-        if (ellipsis != -1)
-            fromindex = ellipsis + 5;
-        // If the first non-whitespace character is an @, go beyond it
-        int i = 0;
-        while (i < textLen && text.charAt(i) == ' ') {
-            i++;
-        }
-        if (text.charAt(i) == '@' && fromindex < textLen - 1)
-            fromindex = i + 1;
-        // Use the brute force approach.
-        index = minIndex(index, text.indexOf("? ", fromindex));
-        index = minIndex(index, text.indexOf("?\t", fromindex));
-        index = minIndex(index, text.indexOf("?\n", fromindex));
-        index = minIndex(index, text.indexOf("?\r", fromindex));
-        index = minIndex(index, text.indexOf("?\f", fromindex));
-        index = minIndex(index, text.indexOf("! ", fromindex));
-        index = minIndex(index, text.indexOf("!\t", fromindex));
-        index = minIndex(index, text.indexOf("!\n", fromindex));
-        index = minIndex(index, text.indexOf("!\r", fromindex));
-        index = minIndex(index, text.indexOf("!\f", fromindex));
-        index = minIndex(index, text.indexOf(". ", fromindex));
-        index = minIndex(index, text.indexOf(".\t", fromindex));
-        index = minIndex(index, text.indexOf(".\n", fromindex));
-        index = minIndex(index, text.indexOf(".\r", fromindex));
-        index = minIndex(index, text.indexOf(".\f", fromindex));
-        index = minIndex(index, text.indexOf("@param", fromindex));
-        index = minIndex(index, text.indexOf("@return", fromindex));
-        index = minIndex(index, text.indexOf("@throw", fromindex));
-        index = minIndex(index, text.indexOf("@serial", fromindex));
-        index = minIndex(index, text.indexOf("@exception", fromindex));
-        index = minIndex(index, text.indexOf("@deprecate", fromindex));
-        index = minIndex(index, text.indexOf("@author", fromindex));
-        index = minIndex(index, text.indexOf("@since", fromindex));
-        index = minIndex(index, text.indexOf("@see", fromindex));
-        index = minIndex(index, text.indexOf("@version", fromindex));
-        if (doExclude && excludeTag != null)
-            index = minIndex(index, text.indexOf(excludeTag));
-        index = minIndex(index, text.indexOf("@vtexclude", fromindex));
-        index = minIndex(index, text.indexOf("@vtinclude", fromindex));
-        index = minIndex(index, text.indexOf("<p>", 2)); // Not at start
-        index = minIndex(index, text.indexOf("<P>", 2)); // Not at start
-        index = minIndex(index, text.indexOf("<blockquote", 2));  // Not at start
-        index = minIndex(index, text.indexOf("<pre", fromindex)); // May contain anything!
-        // Avoid the char at the start of a tag in some cases
-        if (index != -1 &&
-                (text.charAt(index) == '@' || text.charAt(index) == '<')) {
-            if (index != 0)
-                index--;
-        }
-        
-/* Not used for jdiff, since tags are explicitly checked for above.
-        // Look for a sentence terminated by an HTML tag.
-        index = minIndex(index, text.indexOf(".<", fromindex));
-        if (index == -1) {
-            // If period-whitespace etc was not found, check to see if
-            // last character is a period,
-            int endIndex = text.length()-1;
-            if (text.charAt(endIndex) == '.' ||
-                text.charAt(endIndex) == '?' ||
-                text.charAt(endIndex) == '!') 
-                index = endIndex;
-        }
-*/
-        return index;
-    }
-
-    /**
-     * Return the minimum of two indexes if > -1, and return -1
-     * only if both indexes = -1.
-     *
-     * @param i an int index
-     * @param j an int index
-     * @return an int equal to the minimum index > -1, or -1
-     */
-    public static int minIndex(int i, int j) {
-        if (i == -1) return j;
-        if (j == -1) return i;
-        return Math.min(i, j);
-    }
-
-    /**
-     * The name of the file where the XML representing the API will be
-     * stored.
-     */
-    public static String outputFileName = null;
-
-    /**
-     * The identifier of the API being written out in XML, e.g.
-     * &quotSuperProduct 1.3&quot;.
-     */
-    public static String apiIdentifier = null;
-
-    /**
-     * The file where the XML representing the API will be stored.
-     */
-    private static PrintWriter outputFile = null;
-
-    /**
-     * The name of the directory where the XML representing the API will be
-     * stored.
-     */
-    public static String outputDirectory = null;
-
-    /**
-     * Do not display a class  with a lower level of visibility than this.
-     * Default is to display all public and protected classes.
-     */
-    public static String classVisibilityLevel = "protected";
-
-    /**
-     * Do not display a member with a lower level of visibility than this.
-     * Default is to display all public and protected members
-     * (constructors, methods, fields).
-     */
-    public static String memberVisibilityLevel = "protected";
-
-    /**
-     * If set, then save the entire contents of a doc block comment in the
-     * API file. If not set, then just save the first sentence. Default is
-     * that this is set.
-     */
-    public static boolean saveAllDocs = true;
-
-    /**
-     * If set, exclude program elements marked with whatever the exclude tag
-     * is specified as, e.g. "@exclude".
-     */
-    public static boolean doExclude = false;
-
-    /**
-     * Exclude program elements marked with this String, e.g. "@exclude".
-     */
-    public static String excludeTag = null;
-
-    /**
-     * The base URI for locating necessary DTDs and Schemas. By default, this
-     * is "http://www.w3.org". A typical value to use local copies of DTD files
-     * might be "file:///C:/jdiff/lib"
-     */
-    public static String baseURI = "http://www.w3.org";
-
-    /**
-     * If set, then strip out non-printing characters from documentation.
-     * Default is that this is set.
-     */
-    static boolean stripNonPrintables = true;
-
-    /**
-     * If set, then add the information about the source file and line number
-     * which is available in J2SE1.4. Default is that this is not set.
-     */
-    static boolean addSrcInfo = false;
-
-    /**
-     * If set, scan classes with no packages.
-     * If the source is  a jar file this may duplicates classes, so
-     * disable it using the -packagesonly option. Default is that this is
-     * not set.
-     */
-    static boolean packagesOnly = false;
-
-    /**
-     * Set to enable increased logging verbosity for debugging.
-     */
-    private static final boolean trace = false;
 
 } //RootDocToXML

@@ -25,6 +25,16 @@ import java.util.List;
 class CommentsHandler extends DefaultHandler {
 
     /**
+     * Set to enable increased logging verbosity for debugging.
+     */
+    private static final boolean trace = false;
+
+    /**
+     * The stack of SingleComments still waiting for comment text.
+     */
+    private final LinkedList<String> tagStack = new LinkedList<>();
+
+    /**
      * The Comments object which is populated from the XML file.
      */
     public Comments comments_;
@@ -45,16 +55,10 @@ class CommentsHandler extends DefaultHandler {
     private String currentText;
 
     /**
-     * The stack of SingleComments still waiting for comment text.
-     */
-    private LinkedList<String> tagStack;
-
-    /**
      * Default constructor.
      */
     public CommentsHandler(Comments comments) {
         comments_ = comments;
-        tagStack = new LinkedList<>();
     }
 
     public void startDocument() {
@@ -212,11 +216,6 @@ class CommentsHandler extends DefaultHandler {
         e.printStackTrace();
         System.exit(1);
     }
-
-    /**
-     * Set to enable increased logging verbosity for debugging.
-     */
-    private static final boolean trace = false;
 
 }
 

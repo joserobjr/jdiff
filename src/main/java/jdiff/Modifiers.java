@@ -15,23 +15,23 @@ class Modifiers implements Comparable<Modifiers> {
     /**
      * Set if the program element is static.
      */
-    public boolean isStatic = false;
+    public boolean isStatic;
 
     /**
      * Set if the program element is final.
      */
-    public boolean isFinal = false;
+    public boolean isFinal;
 
     /**
      * Set if the program element is deprecated.
      */
-    public boolean isDeprecated = false;
+    public boolean isDeprecated;
 
     /**
      * The visibility level; "public", "protected", "package" or
      * "private"
      */
-    public String visibility = null;
+    public String visibility;
 
     /**
      * Default constructor.
