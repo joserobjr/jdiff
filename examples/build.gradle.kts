@@ -1,31 +1,19 @@
 tasks {
-    val home = buildDir.resolve("jdiffHome")
-    val unzipJDiff = create<Copy>("unzipJDiff") {
-        from(zipTree(rootProject.tasks.getByName<Zip>("distZip").archiveFile))
-        into(home.absolutePath)
-        doFirst {
-            home.mkdirs()
-        }
-    }
-
     create("runJdiff") {
-        dependsOn(":antjdiff:jar", ":distZip", unzipJDiff)
+        group = "example"
+        dependsOn(":antjdiff:jar")
 
         doLast {
             val antFile = project(":antjdiff").tasks.getByName<Jar>("jar").archiveFile.get().asFile
+            val dest = buildDir.resolve("myreport").absolutePath
             ant.withGroovyBuilder {
-                "property"(
-                    "name" to "JDIFF_HOME",
-                    "value" to home.resolve("jdiff").resolve("lib").absolutePath
-                )
-
                 "taskdef"(
                     "name" to "jdiff",
                     "classname" to "jdiff.JDiffAntTask",
                     "classpath" to antFile.absolutePath
                 )
 
-                "jdiff"("destdir" to buildDir.resolve("myreport").absolutePath, "verbose" to "on", "stats" to "on", "docchanges" to "on") {
+                "jdiff"("destdir" to dest, "verbose" to "on", "stats" to "on", "docchanges" to "on") {
                     "old"("name" to "Version 1") {
                         "dirset"("dir" to "$projectDir/SuperProduct1.0", "includes" to "com/**")
                     }
@@ -34,10 +22,12 @@ tasks {
                     }
                 }
             }
+            println("Check the $dest folder to view the results")
         }
     }
 
     create("clean") {
+        group = "build"
         doLast {
             check(buildDir.deleteRecursively())
         }

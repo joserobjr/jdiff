@@ -1,7 +1,7 @@
 package ChangedPackageDoc2;
 
 /** 
- * This is also a test for non UTF-8 characters such as "Fahrvergnügen", and 
+ * This is also a test for non UTF-8 characters such as "FahrvergnÃ¼gen", and
  * also OLD: The changes in this class are only in documentation.
  */
 public class ChangedMethod {

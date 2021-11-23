@@ -25,10 +25,19 @@ import org.apache.tools.ant.taskdefs.Javadoc;
 import org.apache.tools.ant.taskdefs.Javadoc.DocletInfo;
 import org.apache.tools.ant.taskdefs.Javadoc.DocletParam;
 import org.apache.tools.ant.types.DirSet;
+import org.apache.tools.ant.types.EnumeratedAttribute;
 import org.apache.tools.ant.types.Path;
 
-import java.io.*;
-import java.util.Vector;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * An Ant task to produce a simple JDiff report. More complex reports still
@@ -39,39 +48,17 @@ import java.util.Vector;
 public class JDiffAntTask {
 
     /**
-     * Forward or backward slash, as appropriate.
-     */
-    static String DIR_SEP = System.getProperty("file.separator");
-
-    /**
-     * Set if ant was started with -v or -verbose
-     */
-    private final boolean verboseAnt = false;
-
-    /**
      * The JDiff Ant task does not inherit from an Ant task, such as the
      * Javadoc task, though this is usually how most Tasks are
      * written. This is because JDiff needs to run Javadoc three times
      * (twice for generating XML, once for generating HTML). The
-     * Javadoc task has not easy way to reset its list of packages, so
+     * Javadoc task has no easy way to reset its list of packages, so
      * we needed to be able to crate new Javadoc task objects.
      * <p>
      * Note: Don't confuse this class with the ProjectInfo used by JDiff.
      * This Project class is from Ant.
      */
     private Project project;
-
-    /**
-     * JDIFF_HOME must be set as a property in the Ant build file.
-     * It should be set to the root JDiff directory, ie. the one where
-     * jdiff.jar is found.
-     */
-    private String jdiffHome = "(not set)";
-
-    /**
-     * The classpath used by Javadoc to find jdiff.jar and xerces.jar.
-     */
-    private String jdiffClassPath = "(not set)";
 
     /**
      * The destination directory for the generated report.
@@ -105,7 +92,93 @@ public class JDiffAntTask {
     /**
      * Allow the source language version to be specified.
      */
-    private String source = "1.5"; // Default is 1.5, so generics will work
+    private String source = "1.8";
+
+    /**
+     * Add author tags to the javadoc
+     */
+    private boolean author = true;
+
+    /**
+     * Set the scope to be processed by javadoc.
+     */
+    private Javadoc.AccessType access = (Javadoc.AccessType) EnumeratedAttribute.getInstance(Javadoc.AccessType.class, "protected");
+
+    /**
+     * Set the text to be placed at the bottom of each output file.
+     */
+    private Javadoc.Html javadocBottom;
+
+    /**
+     * Set the header text to be placed at the top of each output file.
+     */
+    private Javadoc.Html javadocHeader;
+
+    /**
+     * Set the footer text to be placed at the bottom of each output file.
+     */
+    private Javadoc.Html javadocFooter;
+
+    /**
+     * Charset for cross-platform viewing of generated documentation.
+     */
+    private String charset;
+
+    /**
+     * Output file encoding.
+     */
+    private String docEncoding;
+
+    /**
+     * Set the encoding name of the source files.
+     */
+    private String encoding;
+
+    /**
+     * Set the title of the generated overview page.
+     */
+    private Javadoc.Html javadocTitle;
+
+    /**
+     * Should the build process fail if Javadoc fails (as indicated by a non zero return code)?
+     * Default is false.
+     */
+    private boolean failsOnError;
+
+    /**
+     * Should the build process fail if Javadoc warns (as indicated by the word "warning" on stdout)?
+     * Default is false.
+     */
+    private boolean failsOnWarning;
+
+    /**
+     * Group specified packages together in overview page.
+     * <p>A command separated list of group specs, each one being a group name and package specification separated by a space.</p>
+     */
+    private String group;
+
+    /**
+     * Makes use of the break iterator class.
+     * <p>
+     * The BreakIterator class implements methods for finding the location of boundaries in text. Instances of BreakIterator maintain a current position and scan over text returning the index of characters where boundaries occur. Internally, BreakIterator scans text using a CharacterIterator, and is thus able to scan text held by any object implementing that protocol. A StringCharacterIterator is used to scan String objects passed to setText.
+     */
+    private boolean breakIterator;
+
+    /**
+     * Enables the -linksource switch, will be ignored if Javadoc is not the 1.4 version.
+     */
+    private boolean linkSource;
+
+    /**
+     * Link to docs at "url" using package list at "url2"
+     * - separate the URLs by using a space character.
+     */
+    private List<String> linkOffline;
+
+    /**
+     * Set an additional parameter on the command line.
+     */
+    private List<String> javadocAdditionalParams;
 
     /**
      * A ProjectInfo-derived object for the older version of the project
@@ -117,31 +190,26 @@ public class JDiffAntTask {
      */
     private ProjectInfo newProject;
 
-    @SuppressWarnings("unused")
+    /**
+     * Called by Ant to execute the task.
+     * @throws BuildException If there were problems executing the task.
+     */
     public void execute() throws BuildException {
-        execution();
+        try {
+            execution();
+        } catch (BuildException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BuildException(e);
+        }
     }
 
-    private void execution() {
-        jdiffHome = project.getProperty("JDIFF_HOME");
-        if (jdiffHome == null || jdiffHome.compareTo("") == 0 |
-                jdiffHome.compareTo("(not set)") == 0) {
-            throw new BuildException("Error: invalid JDIFF_HOME property. Set it in the build file to the directory where jdiff is installed");
-        }
-        project.log(" JDiff home: " + jdiffHome, Project.MSG_INFO);
-
-        jdiffClassPath = jdiffHome + DIR_SEP + "jdiff.jar" +
-                System.getProperty("path.separator") +
-                jdiffHome + DIR_SEP + "xerces-1.4.4.jar";
-
-        // TODO detect and set verboseAnt
-
+    private void execution() throws BuildException {
         // Create, if necessary, the directory for the JDiff HTML report
-        if (!destdir.mkdir() && !destdir.exists()) {
-            throw new BuildException(getDestdir() + " is not a valid directory");
+        if (!destdir.isDirectory() && !destdir.mkdirs()) {
+            throw new BuildException(destdir + " is not a valid directory");
         } else {
-            project.log(" Report location: " + getDestdir() + DIR_SEP
-                    + "changes.html", Project.MSG_INFO);
+            logReportLocation();
         }
         // Could also output the other parameters used for JDiff here
 
@@ -151,18 +219,93 @@ public class JDiffAntTask {
             throw new BuildException("Error: two projects are needed, one <old> and one <new>");
         }
 
+        // Extract the required assets asynchronously
+        CompletableFuture<File> futureAssets = CompletableFuture.supplyAsync(() -> {
+            try {
+                return extractAssets();
+            } catch (IOException | URISyntaxException e) {
+                throw new BuildException(e);
+            }
+        });
+
+        CompletableFuture<String> futureJDiffClasspath = futureAssets.thenApply(assets->
+                Arrays.stream(Objects.requireNonNull(new File(assets, "libs").listFiles()))
+                        .map(File::getAbsolutePath)
+                        .collect(Collectors.joining(File.pathSeparator))
+        );
+
         // Call Javadoc twice to generate Javadoc for each project
         generateJavadoc(oldProject);
         generateJavadoc(newProject);
 
-        // Call Javadoc three times for JDiff.
-        generateXML(oldProject);
-        generateXML(newProject);
-        compareXML(oldProject.getName(), newProject.getName());
+        // Get the result of the async process
+        File assets;
+        String jDiffClasspath;
+        try {
+            assets = futureAssets.get();
+            jDiffClasspath = futureJDiffClasspath.get();
+        } catch (ExecutionException|InterruptedException e) {
+            throw new BuildException(e);
+        }
 
-        // Repeat some useful information
-        project.log(" Report location: " + getDestdir() + DIR_SEP
-                + "changes.html", Project.MSG_INFO);
+        try {
+            // Call Javadoc three times for JDiff.
+            generateXML(oldProject, jDiffClasspath);
+            generateXML(newProject, jDiffClasspath);
+            compareXML(oldProject.getName(), newProject.getName(), assets, jDiffClasspath);
+
+            // Repeat some useful information
+            logReportLocation();
+        } finally {
+            // Delete the temporary folder recursively
+            try (Stream<java.nio.file.Path> walk = Files.walk(assets.toPath())) {
+                //noinspection ResultOfMethodCallIgnored
+                walk.sorted(Comparator.reverseOrder())
+                        .map(java.nio.file.Path::toFile)
+                        .forEach(File::delete);
+            } catch (IOException e) {
+                project.log(" Failed to delete the temporary folder " + assets, e, Project.MSG_WARN);
+            }
+        }
+    }
+
+    private void logReportLocation() {
+        project.log(" Report location: " + destdir + File.separator + "changes.html", Project.MSG_INFO);
+    }
+
+    /**
+     * Extracts the assets into a temporary folder.
+     * @return The temporary folder.
+     */
+    private File extractAssets() throws IOException, URISyntaxException {
+        String dir = "/META-INF/assets";
+        java.nio.file.Path tempFolder = Files.createTempDirectory("jdiff_jars_");
+        URI uri = Objects.requireNonNull(JDiffAntTask.class.getResource(dir)).toURI();
+        java.nio.file.Path path;
+        FileSystem fileSystem = null;
+        try {
+            if (uri.getScheme().equals("jar")) {
+                fileSystem = FileSystems.newFileSystem(uri, Collections.emptyMap());
+                path = fileSystem.getPath(dir);
+            } else {
+                path = Paths.get(uri);
+            }
+            try(Stream<java.nio.file.Path> walk = Files.walk(path, 2)) {
+                walk.forEach(subPath -> {
+                    java.nio.file.Path target = tempFolder.resolve(path.relativize(subPath).toString());
+                    try {
+                        Files.copy(subPath, target, StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        throw new BuildException("Could not copy file " + subPath + " to " +target, e);
+                    }
+                });
+            }
+        } finally {
+            if (fileSystem != null) {
+                fileSystem.close();
+            }
+        }
+        return tempFolder.toFile();
     }
 
     /**
@@ -170,26 +313,27 @@ public class JDiffAntTask {
      * to generate the XML representation of a project's source files.
      *
      * @param proj The current Project
+     * @param jDiffClasspath The JDiff doclet classpath
      */
-    protected void generateXML(ProjectInfo proj) {
-        String apiname = proj.getName();
-        Javadoc jd = initJavadoc("Analyzing " + apiname);
-        jd.setDestdir(getDestdir());
-        addSourcePaths(jd, proj);
+    private void generateXML(ProjectInfo proj, String jDiffClasspath) {
+        String apiName = proj.getName();
+        Javadoc javadoc = initJavadoc("Analyzing " + apiName);
+        javadoc.setDestdir(getDestdir());
+        addSourcePaths(javadoc, proj);
 
         // Tell Javadoc which packages we want to scan.
         // JDiff works with packagenames, not sourcefiles.
-        jd.setPackagenames(getPackageList(proj));
+        javadoc.setPackagenames(getPackageList(proj));
 
         // Create the DocletInfo first so we have a way to use it to add params
-        DocletInfo dInfo = jd.createDoclet();
-        jd.setDoclet("jdiff.JDiff");
-        jd.setDocletPath(new Path(project, jdiffClassPath));
+        DocletInfo dInfo = javadoc.createDoclet();
+        javadoc.setDoclet("jdiff.JDiff");
+        javadoc.setDocletPath(new Path(project, jDiffClasspath));
 
         // Now set up some parameters for the JDiff doclet.
         DocletParam dp1 = dInfo.createParam();
         dp1.setName("-apiname");
-        dp1.setValue(apiname);
+        dp1.setValue(apiName);
         DocletParam dp2 = dInfo.createParam();
         dp2.setName("-baseURI");
         dp2.setValue("http://www.w3.org");
@@ -199,29 +343,29 @@ public class JDiffAntTask {
         dp3.setValue(getDestdir().toString());
 
         // Execute the Javadoc command to generate the XML file.
-        jd.perform();
+        javadoc.perform();
     }
 
     /**
      * Convenient method to create a Javadoc task, configure it and run it
      * to compare the XML representations of two instances of a project's
      * source files, and generate an HTML report summarizing the differences.
-     *
      * @param oldapiname The name of the older version of the project
      * @param newapiname The name of the newer version of the project
+     * @param assets The path to the extracted assets folder
+     * @param jDiffClasspath The JDiff doclet classpath
      */
-    protected void compareXML(String oldapiname, String newapiname) {
-        Javadoc jd = initJavadoc("Comparing versions");
-        jd.setDestdir(getDestdir());
-        jd.setPrivate(true);
+    private void compareXML(String oldapiname, String newapiname, File assets, String jDiffClasspath) {
+        Javadoc javadoc = initJavadoc("Comparing versions");
+        javadoc.setDestdir(getDestdir());
 
         // Tell Javadoc which files we want to scan - a dummy file in this case
-        jd.setSourcefiles(jdiffHome + DIR_SEP + "Null.java");
+        javadoc.setSourcefiles(assets + File.separator + "Null.java");
 
         // Create the DocletInfo first so we have a way to use it to add params
-        DocletInfo dInfo = jd.createDoclet();
-        jd.setDoclet("jdiff.JDiff");
-        jd.setDocletPath(new Path(project, jdiffClassPath));
+        DocletInfo dInfo = javadoc.createDoclet();
+        javadoc.setDoclet("jdiff.JDiff");
+        javadoc.setDocletPath(new Path(project, jDiffClasspath));
 
         // Now set up some parameters for the JDiff doclet.
         DocletParam dp1 = dInfo.createParam();
@@ -241,19 +385,25 @@ public class JDiffAntTask {
         // Assume that Javadoc reports already exist in ../"apiname"
         DocletParam dp5 = dInfo.createParam();
         dp5.setName("-javadocold");
-        dp5.setValue(".." + DIR_SEP + oldapiname + DIR_SEP);
+        dp5.setValue(".." + File.separator + oldapiname + File.separator);
         DocletParam dp6 = dInfo.createParam();
         dp6.setName("-javadocnew");
-        dp6.setValue(".." + DIR_SEP + newapiname + DIR_SEP);
+        dp6.setValue(".." + File.separator + newapiname + File.separator);
 
         if (getStats()) {
             // There are no arguments to this argument
             dInfo.createParam().setName("-stats");
+
+            File reportSubDir = new File(getDestdir() + File.separator + "changes");
+            if (!reportSubDir.mkdir() && !reportSubDir.exists()) {
+                project.log("Warning: unable to create " + reportSubDir, Project.MSG_WARN);
+            }
+
             // We also have to copy two image files for the stats pages
-            copyFile(jdiffHome + DIR_SEP + "black.gif",
-                    getDestdir().toString() + DIR_SEP + "black.gif");
-            copyFile(jdiffHome + DIR_SEP + "background.gif",
-                    getDestdir().toString() + DIR_SEP + "background.gif");
+            java.nio.file.Path destDirPath = getDestdir().toPath();
+            java.nio.file.Path assetsPath = assets.toPath();
+            copyFile(assetsPath.resolve("black.gif"), destDirPath);
+            copyFile(assetsPath.resolve("background.gif"), destDirPath);
         }
 
         if (getDocchanges()) {
@@ -267,7 +417,7 @@ public class JDiffAntTask {
         }
 
         // Execute the Javadoc command to compare the two XML files
-        jd.perform();
+        javadoc.perform();
     }
 
     /**
@@ -278,24 +428,22 @@ public class JDiffAntTask {
      *
      * @param proj The current Project
      */
-    protected void generateJavadoc(ProjectInfo proj) {
-        String javadoc = proj.getJavadoc();
-        if (javadoc != null && javadoc.compareTo("generated") != 0) {
-            project.log("Configured to use existing Javadoc located in " +
-                    javadoc, Project.MSG_INFO);
+    private void generateJavadoc(ProjectInfo proj) {
+        String javadocPath = proj.getJavadoc();
+        if (javadocPath != null && !javadocPath.equalsIgnoreCase("generated")) {
+            project.log("Configured to use existing Javadoc located in " + javadocPath, Project.MSG_INFO);
             return;
         }
 
-        String apiname = proj.getName();
-        Javadoc jd = initJavadoc("Javadoc for " + apiname);
-        jd.setDestdir(new File(getDestdir().toString() + DIR_SEP + apiname));
-        addSourcePaths(jd, proj);
+        String apiName = proj.getName();
+        Javadoc javadoc = initJavadoc("Javadoc for " + apiName);
+        javadoc.setDestdir(new File(destdir, apiName));
+        addSourcePaths(javadoc, proj);
 
-        jd.setPrivate(true);
-        jd.setPackagenames(getPackageList(proj));
+        javadoc.setPackagenames(getPackageList(proj));
 
         // Execute the Javadoc command to generate a regular Javadoc report
-        jd.perform();
+        javadoc.perform();
     }
 
     /**
@@ -304,30 +452,50 @@ public class JDiffAntTask {
      * @param logMsg String which appears as a prefix in the Ant log
      * @return The new task.Javadoc object
      */
-    protected Javadoc initJavadoc(String logMsg) {
-        Javadoc jd = new Javadoc();
-        jd.setProject(project); // Vital, otherwise Ant crashes
-        jd.setTaskName(logMsg);
-        jd.setSource(getSource()); // So we can set the language version
-        jd.init();
+    private Javadoc initJavadoc(String logMsg) {
+        Javadoc javadoc = new Javadoc();
+        javadoc.setProject(project); // Vital, otherwise Ant crashes
+        javadoc.setTaskName(logMsg);
+        javadoc.setSource(getSource()); // So we can set the language version
+        javadoc.setAccess(getAccess());
+        javadoc.setAuthor(getAuthor());
+        javadoc.setFailonerror(isFailsOnError());
+        javadoc.setFailonwarning(isFailsOnWarning());
+        javadoc.setGroup(getGroup());
+        javadoc.setBreakiterator(isBreakIterator());
+        javadoc.setLinksource(isLinkSource());
+
+        Optional.ofNullable(javadocTitle).ifPresent(javadoc::addDoctitle);
+        Optional.ofNullable(javadocBottom).ifPresent(javadoc::addBottom);
+
+        Optional.ofNullable(javadocHeader).ifPresent(javadoc::addHeader);
+        Optional.ofNullable(javadocFooter).ifPresent(javadoc::addFooter);
+
+        Optional.ofNullable(getCharset()).ifPresent(javadoc::setCharset);
+        Optional.ofNullable(getDocEncoding()).ifPresent(javadoc::setDocencoding);
+        Optional.ofNullable(getEncoding()).ifPresent(javadoc::setEncoding);
+
+        Optional.ofNullable(linkOffline).ifPresent(list -> list.forEach(javadoc::setLinkoffline));
+        Optional.ofNullable(javadocAdditionalParams).ifPresent(list -> list.forEach(javadoc::setAdditionalparam));
+        javadoc.init();
 
         // Set up some common parameters for the Javadoc task
-        if (verboseAnt) {
-            jd.setVerbose(true);
+        if (verbose) {
+            javadoc.setVerbose(true);
         }
-        return jd;
+        return javadoc;
     }
 
     /**
      * Add the root directories for the given project to the Javadoc
      * sourcepath.
      */
-    protected void addSourcePaths(Javadoc jd, ProjectInfo proj) {
+    private void addSourcePaths(Javadoc jd, ProjectInfo proj) {
         Vector<DirSet> dirSets = proj.getDirsets();
         int numDirSets = dirSets.size();
         for (int i = 0; i < numDirSets; i++) {
             DirSet dirSet = dirSets.elementAt(i);
-            jd.setSourcepath(new Path(project, dirSet.getDir(project).toString()));
+            jd.setSourcepath(new Path(project, dirSet.getDir(project).getPath()));
         }
     }
 
@@ -337,7 +505,7 @@ public class JDiffAntTask {
      * in a hierarchy, e.g. com, com/acme. com/acme/foo. Duplicates are
      * ignored.
      */
-    protected String getPackageList(ProjectInfo proj) throws BuildException {
+    private String getPackageList(ProjectInfo proj) throws BuildException {
         StringBuilder sb = new StringBuilder();
         Vector<DirSet> dirSets = proj.getDirsets();
         int numDirSets = dirSets.size();
@@ -365,40 +533,17 @@ public class JDiffAntTask {
     }
 
     /**
-     * Copy a file from src to dst. Also checks that "destdir/changes" exists
+     * Copy a file from src to dst.
      */
-    protected void copyFile(String src, String dst) {
-        File srcFile = new File(src);
-        File dstFile = new File(dst);
+    private void copyFile(java.nio.file.Path src, java.nio.file.Path destDir) {
+        java.nio.file.Path dest = destDir.resolve(src.getFileName());
         try {
-            File reportSubdir = new File(getDestdir().toString() +
-                    DIR_SEP + "changes");
-            if (!reportSubdir.mkdir() && !reportSubdir.exists()) {
-                project.log("Warning: unable to create " + reportSubdir,
-                        Project.MSG_WARN);
-            }
-
-            try (
-                    InputStream in = new FileInputStream(src);
-                    OutputStream out = new FileOutputStream(dst)
-            ) {
-                // Transfer bytes from in to out
-                byte[] buf = new byte[8 * 1024];
-                int len;
-                while ((len = in.read(buf)) > 0) {
-                    out.write(buf, 0, len);
-                }
-            }
-        } catch (IOException fnfe) {
-            project.log("Warning: unable to copy " + src +
-                    " to " + dst, Project.MSG_WARN);
-            // Discard the exception
+            Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            project.log("Warning: unable to copy " + src + " to " + dest, e, Project.MSG_WARN);
         }
     }
 
-    /**
-     * Used as part of Ant's startup.
-     */
     public void setProject(Project proj) {
         project = proj;
     }
@@ -407,9 +552,6 @@ public class JDiffAntTask {
         return this.destdir;
     }
 
-    /**
-     * Used to store the destdir attribute of the JDiff task XML element.
-     */
     public void setDestdir(File value) {
         this.destdir = value;
     }
@@ -454,6 +596,116 @@ public class JDiffAntTask {
         this.source = source;
     }
 
+    public boolean getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(boolean author) {
+        this.author = author;
+    }
+
+    public Javadoc.AccessType getAccess() {
+        return access;
+    }
+
+    public void setAccess(Javadoc.AccessType access) {
+        this.access = access;
+    }
+
+    public void addJavadocBottom(Javadoc.Html javadocBottom) {
+        this.javadocBottom = javadocBottom;
+    }
+
+    public void addJavadocHeader(Javadoc.Html javadocHeader) {
+        this.javadocHeader = javadocHeader;
+    }
+
+    public void addJavadocFooter(Javadoc.Html javadocFooter) {
+        this.javadocFooter = javadocFooter;
+    }
+
+    public String getCharset() {
+        return charset;
+    }
+
+    public void setCharset(String charset) {
+        this.charset = charset;
+    }
+
+    public String getDocEncoding() {
+        return docEncoding;
+    }
+
+    public void setDocEncoding(String docEncoding) {
+        this.docEncoding = docEncoding;
+    }
+
+    public String getEncoding() {
+        return encoding;
+    }
+
+    public void setEncoding(String encoding) {
+        this.encoding = encoding;
+    }
+
+    public void addJavadocTitle(Javadoc.Html javadocTitle) {
+        this.javadocTitle = javadocTitle;
+    }
+
+    public boolean isFailsOnError() {
+        return failsOnError;
+    }
+
+    public void setFailsOnError(boolean failsOnError) {
+        this.failsOnError = failsOnError;
+    }
+
+    public boolean isFailsOnWarning() {
+        return failsOnWarning;
+    }
+
+    public void setFailsOnWarning(boolean failsOnWarning) {
+        this.failsOnWarning = failsOnWarning;
+    }
+
+    public String getGroup() {
+        return group;
+    }
+
+    public void setGroup(String group) {
+        this.group = group;
+    }
+
+    public boolean isBreakIterator() {
+        return breakIterator;
+    }
+
+    public void setBreakIterator(boolean breakIterator) {
+        this.breakIterator = breakIterator;
+    }
+
+    public boolean isLinkSource() {
+        return linkSource;
+    }
+
+    public void setLinkSource(boolean linkSource) {
+        this.linkSource = linkSource;
+    }
+
+    public void addLinkOffline(String link) {
+        if (linkOffline == null) {
+            linkOffline = new ArrayList<>();
+        }
+        linkOffline.add(link);
+    }
+
+    public void addAdditionalJavadocParam(String param) {
+        if (javadocAdditionalParams == null) {
+            javadocAdditionalParams = new ArrayList<>();
+        }
+        javadocAdditionalParams.add(param);
+    }
+
     /**
      * Used to store the child element named "old", which is under the
      * JDiff task XML element.
@@ -482,7 +734,7 @@ public class JDiffAntTask {
          * These are the directories which contain the packages which make
          * up the project. Filesets are not supported by JDiff.
          */
-        private final Vector<DirSet> dirsets = new Vector<DirSet>();
+        private final Vector<DirSet> dirsets = new Vector<>();
 
         /**
          * The name of the project. This is used (without spaces) as the
