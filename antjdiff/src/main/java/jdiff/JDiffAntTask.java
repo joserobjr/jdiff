@@ -33,7 +33,7 @@ public class JDiffAntTask {
 
 	jdiffClassPath = jdiffHome + DIR_SEP + "jdiff.jar" +
 	    System.getProperty("path.separator") +
-	    jdiffHome + DIR_SEP + "xerces.jar";
+	    jdiffHome + DIR_SEP + "xerces-1.4.4.jar";
 
 	// TODO detect and set verboseAnt
 

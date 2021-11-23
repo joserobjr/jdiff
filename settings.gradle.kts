@@ -1,0 +1,2 @@
+include(":antjdiff")
+include(":examples")
