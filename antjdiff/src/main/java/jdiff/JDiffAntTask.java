@@ -33,12 +33,96 @@ import java.util.Vector;
 /**
  * An Ant task to produce a simple JDiff report. More complex reports still
  * need parameters that are controlled by the Ant Javadoc task.
- * 
+ *
  * @author Matthew Doar, mdoar@pobox.com
  */
 public class JDiffAntTask {
 
+    /**
+     * Forward or backward slash, as appropriate.
+     */
+    static String DIR_SEP = System.getProperty("file.separator");
+
+    /**
+     * Set if ant was started with -v or -verbose
+     */
+    private final boolean verboseAnt = false;
+
+    /**
+     * The JDiff Ant task does not inherit from an Ant task, such as the
+     * Javadoc task, though this is usually how most Tasks are
+     * written. This is because JDiff needs to run Javadoc three times
+     * (twice for generating XML, once for generating HTML). The
+     * Javadoc task has not easy way to reset its list of packages, so
+     * we needed to be able to crate new Javadoc task objects.
+     * <p>
+     * Note: Don't confuse this class with the ProjectInfo used by JDiff.
+     * This Project class is from Ant.
+     */
+    private Project project;
+
+    /**
+     * JDIFF_HOME must be set as a property in the Ant build file.
+     * It should be set to the root JDiff directory, ie. the one where
+     * jdiff.jar is found.
+     */
+    private String jdiffHome = "(not set)";
+
+    /**
+     * The classpath used by Javadoc to find jdiff.jar and xerces.jar.
+     */
+    private String jdiffClassPath = "(not set)";
+
+    /**
+     * The destination directory for the generated report.
+     * The default is "./jdiff_report".
+     */
+    private File destdir = new File("jdiff_report");
+
+    /**
+     * Increases the JDiff Ant task logging verbosity if set with "yes", "on"
+     * or true". Default has to be false.
+     * To increase verbosity of Javadoc, start Ant with -v or -verbose.
+     */
+    private boolean verbose;
+
+    /**
+     * Add the -docchanges argument, to track changes in Javadoc documentation
+     * as well as changes in classes etc.
+     */
+    private boolean docchanges;
+
+    /**
+     * Add the -incompatible argument, to only report incompatible changes.
+     */
+    private boolean incompatible;
+
+    /**
+     * Add statistics to the report if set. Default can only be false.
+     */
+    private boolean stats;
+
+    /**
+     * Allow the source language version to be specified.
+     */
+    private String source = "1.5"; // Default is 1.5, so generics will work
+
+    /**
+     * A ProjectInfo-derived object for the older version of the project
+     */
+    private ProjectInfo oldProject;
+
+    /**
+     * A ProjectInfo-derived object for the newer version of the project
+     */
+    private ProjectInfo newProject;
+
+    @SuppressWarnings("unused")
     public void execute() throws BuildException {
+        execution();
+    }
+
+    private void execution() {
         jdiffHome = project.getProperty("JDIFF_HOME");
         if (jdiffHome == null || jdiffHome.compareTo("") == 0 |
                 jdiffHome.compareTo("(not set)") == 0) {
@@ -66,33 +150,6 @@ public class JDiffAntTask {
         if (oldProject == null || newProject == null) {
             throw new BuildException("Error: two projects are needed, one <old> and one <new>");
         }
-
-	/*
-	// Display the directories being compared, and some name information
-	if (getVerbose()) {
-	    project.log("Older version: " + oldProject.getName(), 
-			Project.MSG_INFO);
-	    project.log("Included directories for older version:", 
-			Project.MSG_INFO);
-	    DirectoryScanner ds = 
-		oldProject.getDirset().getDirectoryScanner(project);
-	    String[] files = ds.getIncludedDirectories();
-	    for (int i = 0; i < files.length; i++) {
-		project.log(" " + files[i], Project.MSG_INFO);
-	    }
-	    ds = null;
-	    
-	    project.log("Newer version: " + newProject.getName(), 
-			Project.MSG_INFO);
-	    project.log("Included directories for newer version:", 
-			Project.MSG_INFO);
-	    ds = newProject.getDirset().getDirectoryScanner(project);
-	    files = ds.getIncludedDirectories();
-	    for (int i = 0; i < files.length; i++) {
-		project.log(" " + files[i], Project.MSG_INFO);
-	    }
-	}
-	*/
 
         // Call Javadoc twice to generate Javadoc for each project
         generateJavadoc(oldProject);
@@ -322,8 +379,8 @@ public class JDiffAntTask {
             }
 
             try (
-                InputStream in = new FileInputStream(src);
-                OutputStream out = new FileOutputStream(dst)
+                    InputStream in = new FileInputStream(src);
+                    OutputStream out = new FileOutputStream(dst)
             ) {
                 // Transfer bytes from in to out
                 byte[] buf = new byte[8 * 1024];
@@ -340,51 +397,15 @@ public class JDiffAntTask {
     }
 
     /**
-     * The JDiff Ant task does not inherit from an Ant task, such as the
-     * Javadoc task, though this is usually how most Tasks are
-     * written. This is because JDiff needs to run Javadoc three times
-     * (twice for generating XML, once for generating HTML). The
-     * Javadoc task has not easy way to reset its list of packages, so
-     * we needed to be able to crate new Javadoc task objects.
-     * <p>
-     * Note: Don't confuse this class with the ProjectInfo used by JDiff.
-     * This Project class is from Ant.
-     */
-    private Project project;
-
-    /**
      * Used as part of Ant's startup.
      */
     public void setProject(Project proj) {
         project = proj;
     }
 
-    /**
-     * Ferward or backward slash, as appropriate.
-     */
-    static String DIR_SEP = System.getProperty("file.separator");
-
-    /**
-     * JDIFF_HOME must be set as a property in the Ant build file.
-     * It should be set to the root JDiff directory, ie. the one where
-     * jdiff.jar is found.
-     */
-    private String jdiffHome = "(not set)";
-
-    /**
-     * The classpath used by Javadoc to find jdiff.jar and xerces.jar.
-     */
-    private String jdiffClassPath = "(not set)";
-
-    /* ***************************************************************** */
-    /* * Objects and methods which are related to attributes           * */
-    /* ***************************************************************** */
-
-    /**
-     * The destination directory for the generated report.
-     * The default is "./jdiff_report".
-     */
-    private File destdir = new File("jdiff_report");
+    public File getDestdir() {
+        return this.destdir;
+    }
 
     /**
      * Used to store the destdir attribute of the JDiff task XML element.
@@ -393,91 +414,45 @@ public class JDiffAntTask {
         this.destdir = value;
     }
 
-    public File getDestdir() {
-        return this.destdir;
-    }
-
-    /**
-     * Increases the JDiff Ant task logging verbosity if set with "yes", "on"
-     * or true". Default has to be false.
-     * To increase verbosity of Javadoc, start Ant with -v or -verbose.
-     */
-    private boolean verbose = false;
-
-    public void setVerbose(boolean value) {
-        this.verbose = value;
-    }
-
     public boolean getVerbose() {
         return this.verbose;
     }
 
-    /**
-     * Set if ant was started with -v or -verbose
-     */
-    private final boolean verboseAnt = false;
-
-    /**
-     * Add the -docchanges argument, to track changes in Javadoc documentation
-     * as well as changes in classes etc.
-     */
-    private boolean docchanges = false;
-
-    public void setDocchanges(boolean value) {
-        this.docchanges = value;
+    public void setVerbose(boolean value) {
+        this.verbose = value;
     }
 
     public boolean getDocchanges() {
         return this.docchanges;
     }
 
-    /**
-     * Add the -incompatible argument, to only report incompatible changes.
-     */
-    private boolean incompatible = false;
-
-    public void setIncompatible(boolean value) {
-        this.incompatible = value;
+    public void setDocchanges(boolean value) {
+        this.docchanges = value;
     }
 
     public boolean getIncompatible() {
         return this.incompatible;
     }
 
-    /**
-     * Add statistics to the report if set. Default can only be false.
-     */
-    private boolean stats = false;
-
-    public void setStats(boolean value) {
-        this.stats = value;
+    public void setIncompatible(boolean value) {
+        this.incompatible = value;
     }
 
     public boolean getStats() {
         return this.stats;
     }
 
-    /**
-     * Allow the source language version to be specified.
-     */
-    private String source = "1.5"; // Default is 1.5, so generics will work
-
-    public void setSource(String source) {
-        this.source = source;
+    public void setStats(boolean value) {
+        this.stats = value;
     }
 
     public String getSource() {
         return source;
     }
 
-    /* ***************************************************************** */
-    /* * Classes and objects which are related to elements             * */
-    /* ***************************************************************** */
-
-    /**
-     * A ProjectInfo-derived object for the older version of the project
-     */
-    private ProjectInfo oldProject = null;
+    public void setSource(String source) {
+        this.source = source;
+    }
 
     /**
      * Used to store the child element named "old", which is under the
@@ -486,11 +461,6 @@ public class JDiffAntTask {
     public void addConfiguredOld(ProjectInfo projInfo) {
         oldProject = projInfo;
     }
-
-    /**
-     * A ProjectInfo-derived object for the newer version of the project
-     */
-    private ProjectInfo newProject = null;
 
     /**
      * Used to store the child element named "new", which is under the
@@ -509,19 +479,17 @@ public class JDiffAntTask {
      */
     public static class ProjectInfo {
         /**
+         * These are the directories which contain the packages which make
+         * up the project. Filesets are not supported by JDiff.
+         */
+        private final Vector<DirSet> dirsets = new Vector<DirSet>();
+
+        /**
          * The name of the project. This is used (without spaces) as the
          * base of the name of the file which contains the XML representing
          * the project.
          */
         private String name;
-
-        public void setName(String value) {
-            name = value;
-        }
-
-        public String getName() {
-            return name;
-        }
 
         /**
          * The location of the Javadoc HTML for this project. Default value
@@ -530,19 +498,21 @@ public class JDiffAntTask {
          */
         private String javadoc;
 
-        public void setJavadoc(String value) {
-            javadoc = value;
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String value) {
+            name = value;
         }
 
         public String getJavadoc() {
             return javadoc;
         }
 
-        /**
-         * These are the directories which contain the packages which make
-         * up the project. Filesets are not supported by JDiff.
-         */
-        private final Vector<DirSet> dirsets = new Vector<DirSet>();
+        public void setJavadoc(String value) {
+            javadoc = value;
+        }
 
         public void setDirset(DirSet value) {
             dirsets.add(value);
