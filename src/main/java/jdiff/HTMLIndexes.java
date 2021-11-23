@@ -81,24 +81,25 @@ public class HTMLIndexes {
                                    APIDiff apiDiff, int indexType,
                                    String programElementType) {
         String filename = indexBaseName;
+        String title = "JDiff";
+        if (indexType == 0) {
+            filename += "_removals" + HTMLReportGenerator.reportFileExt;
+            title = programElementType + " Removals Index";
+        } else if (indexType == 1) {
+            filename += "_additions" + HTMLReportGenerator.reportFileExt;
+            title = programElementType + " Additions Index";
+        } else if (indexType == 2) {
+            filename += "_changes" + HTMLReportGenerator.reportFileExt;
+            title = programElementType + " Changes Index";
+        } else if (indexType == 3) {
+            filename += "_all" + HTMLReportGenerator.reportFileExt;
+            title = programElementType + " Differences Index";
+        }
+
         try (FileOutputStream fos = new FileOutputStream(filename);
              PrintWriter writer = new PrintWriter(fos)
         ) {
             HTMLReportGenerator.reportFile = writer;
-            String title = "JDiff";
-            if (indexType == 0) {
-                filename += "_removals" + HTMLReportGenerator.reportFileExt;
-                title = programElementType + " Removals Index";
-            } else if (indexType == 1) {
-                filename += "_additions" + HTMLReportGenerator.reportFileExt;
-                title = programElementType + " Additions Index";
-            } else if (indexType == 2) {
-                filename += "_changes" + HTMLReportGenerator.reportFileExt;
-                title = programElementType + " Changes Index";
-            } else if (indexType == 3) {
-                filename += "_all" + HTMLReportGenerator.reportFileExt;
-                title = programElementType + " Differences Index";
-            }
 
             h_.writeStartHTMLHeader();
             h_.writeHTMLTitle(title);

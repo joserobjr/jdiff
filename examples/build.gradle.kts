@@ -1,8 +1,11 @@
 tasks {
-    val home = buildDir.resolve("jdiffHome").also { it.mkdirs() }
+    val home = buildDir.resolve("jdiffHome")
     val unzipJDiff = create<Copy>("unzipJDiff") {
         from(zipTree(rootProject.tasks.getByName<Zip>("distZip").archiveFile))
         into(home.absolutePath)
+        doFirst {
+            home.mkdirs()
+        }
     }
 
     create("runJdiff") {
@@ -26,8 +29,8 @@ tasks {
                     "old"("name" to "Version 1") {
                         "dirset"("dir" to "$projectDir/SuperProduct1.0", "includes" to "com/**")
                     }
-                    "new"("name" to "Version 1") {
-                        "dirset"("dir" to "$projectDir/SuperProduct1.0", "includes" to "com/**")
+                    "new"("name" to "Version 2") {
+                        "dirset"("dir" to "$projectDir/SuperProduct2.0", "includes" to "com/**")
                     }
                 }
             }
