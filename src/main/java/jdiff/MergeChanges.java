@@ -1,7 +1,5 @@
 package jdiff;
 
-import java.util.Iterator;
-
 /**
  * Convert some remove and add operations into change operations.
  * <p>
@@ -36,26 +34,20 @@ class MergeChanges {
      */
     public static void mergeRemoveAdd(APIDiff apiDiff) {
         // Go through all the ClassDiff objects searching for the above cases.
-        Iterator<PackageDiff> iter = apiDiff.packagesChanged.iterator();
-        while (iter.hasNext()) {
-            PackageDiff pkgDiff = (iter.next());
-            Iterator<ClassDiff> iter2 = pkgDiff.classesChanged.iterator();
-            while (iter2.hasNext()) {
-                ClassDiff classDiff = (iter2.next());
+        for (PackageDiff pkgDiff : apiDiff.packagesChanged) {
+            for (ClassDiff classDiff : pkgDiff.classesChanged) {
                 // Note: using iterators to step through the members gives a
                 // ConcurrentModificationException exception with large files.
                 // Constructors
                 ConstructorAPI[] ctorArr = new ConstructorAPI[classDiff.ctorsRemoved.size()];
                 ctorArr = classDiff.ctorsRemoved.toArray(ctorArr);
-                for (int ctorIdx = 0; ctorIdx < ctorArr.length; ctorIdx++) {
-                    ConstructorAPI removedCtor = ctorArr[ctorIdx];
+                for (ConstructorAPI removedCtor : ctorArr) {
                     mergeRemoveAddCtor(removedCtor, classDiff, pkgDiff);
                 }
                 // Methods
                 MethodAPI[] methodArr = new MethodAPI[classDiff.methodsRemoved.size()];
                 methodArr = classDiff.methodsRemoved.toArray(methodArr);
-                for (int methodIdx = 0; methodIdx < methodArr.length; methodIdx++) {
-                    MethodAPI removedMethod = methodArr[methodIdx];
+                for (MethodAPI removedMethod : methodArr) {
                     // Only merge locally defined methods
                     if (removedMethod.inheritedFrom_ == null)
                         mergeRemoveAddMethod(removedMethod, classDiff, pkgDiff);
@@ -63,8 +55,7 @@ class MergeChanges {
                 // Fields
                 FieldAPI[] fieldArr = new FieldAPI[classDiff.fieldsRemoved.size()];
                 fieldArr = classDiff.fieldsRemoved.toArray(fieldArr);
-                for (int fieldIdx = 0; fieldIdx < fieldArr.length; fieldIdx++) {
-                    FieldAPI removedField = fieldArr[fieldIdx];
+                for (FieldAPI removedField : fieldArr) {
                     // Only merge locally defined fields
                     if (removedField.inheritedFrom_ == null)
                         mergeRemoveAddField(removedField, classDiff, pkgDiff);
@@ -213,7 +204,7 @@ class MergeChanges {
                 if (addedMethod2.inheritedFrom_ == null &&
                         removedMethod.equalSignatures(addedMethod2))
                     addedIdx = i;
-                break;
+                break; // FIXME Break should be inside if closure
             }
             if (addedIdx == -1)
                 return;

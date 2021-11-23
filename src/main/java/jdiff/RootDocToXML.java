@@ -38,9 +38,10 @@ public class RootDocToXML {
             tempFileName += outputFileName;
         }
 
-        try {
-            FileOutputStream fos = new FileOutputStream(tempFileName);
-            outputFile = new PrintWriter(fos);
+        try (FileOutputStream fos = new FileOutputStream(tempFileName);
+             PrintWriter writer = new PrintWriter(fos)
+        ){
+            outputFile = writer;
             System.out.println("JDiff: writing the API to file '" + tempFileName + "'...");
             if (root.specifiedPackages().length != 0 || root.specifiedClasses().length != 0) {
                 RootDocToXML apiWriter = new RootDocToXML();
@@ -49,7 +50,6 @@ public class RootDocToXML {
                 apiWriter.processPackages(root);
                 apiWriter.emitXMLFooter();
             }
-            outputFile.close();
         } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + tempFileName);
             System.out.println("Error: " + e.getMessage());
@@ -87,9 +87,9 @@ public class RootDocToXML {
                 xsdFileName += JDiff.DIR_SEP;
         }
         xsdFileName += "api.xsd";
-        try {
-            FileOutputStream fos = new FileOutputStream(xsdFileName);
-            PrintWriter xsdFile = new PrintWriter(fos);
+        try(FileOutputStream fos = new FileOutputStream(xsdFileName);
+            PrintWriter xsdFile = new PrintWriter(fos)
+        ) {
             // The contents of the api.xsd file
             xsdFile.println("<?xml version=\"1.0\" encoding=\"iso-8859-1\" standalone=\"no\"?>");
             xsdFile.println("<xsd:schema xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">");
@@ -202,7 +202,6 @@ public class RootDocToXML {
             xsdFile.println("</xsd:complexType>");
             xsdFile.println();
             xsdFile.println("</xsd:schema>");
-            xsdFile.close();
         } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + xsdFileName);
             System.out.println("Error: " + e.getMessage());
@@ -223,11 +222,11 @@ public class RootDocToXML {
     /**
      * Process each package and the classes/interfaces within it.
      *
-     * @param pd an array of PackageDoc objects
+     * @param root an array of PackageDoc objects
      */
     public void processPackages(RootDoc root) {
         PackageDoc[] specified_pd = root.specifiedPackages();
-        Map<String, PackageDoc> pdl = new TreeMap<String, PackageDoc>();
+        Map<String, PackageDoc> pdl = new TreeMap<>();
         for (int i = 0; specified_pd != null && i < specified_pd.length; i++) {
             pdl.put(specified_pd[i].name(), specified_pd[i]);
         }
@@ -236,7 +235,7 @@ public class RootDocToXML {
         // list of specified packages.
         ClassDoc[] cd = root.specifiedClasses();
         // This is lists of the specific classes to document
-        Map classesToUse = new HashMap();
+        Map<String, List<ClassDoc>> classesToUse = new HashMap<>();
         for (int i = 0; cd != null && i < cd.length; i++) {
             PackageDoc cpd = cd[i].containingPackage();
             if (cpd == null && !packagesOnly) {
@@ -254,46 +253,44 @@ public class RootDocToXML {
             }
 
             // Keep track of the specific classes to be used for this package
-            List classes;
+            List<ClassDoc> classes;
             if (classesToUse.containsKey(pkgName)) {
-                classes = (ArrayList) classesToUse.get(pkgName);
+                classes = classesToUse.get(pkgName);
             } else {
-                classes = new ArrayList();
+                classes = new ArrayList<>();
             }
             classes.add(cd[i]);
             classesToUse.put(pkgName, classes);
         }
 
-        PackageDoc[] pd = (PackageDoc[]) pdl.values().toArray(new PackageDoc[0]);
-        for (int i = 0; pd != null && i < pd.length; i++) {
-            String pkgName = pd[i].name();
+        for (PackageDoc packageDoc : pdl.values()) {
+            String pkgName = packageDoc.name();
 
             // Check for an exclude tag in the package doc block, but not
             // in the package.htm[l] file.
-            if (!shownElement(pd[i], null))
+            if (!shownElement(packageDoc, null))
                 continue;
 
             if (trace) System.out.println("PROCESSING PACKAGE: " + pkgName);
             outputFile.println("<package name=\"" + pkgName + "\">");
 
-            int tagCount = pd[i].tags().length;
+            int tagCount = packageDoc.tags().length;
             if (trace) System.out.println("#tags: " + tagCount);
 
-            List classList;
+            List<ClassDoc> classList;
             if (classesToUse.containsKey(pkgName)) {
                 // Use only the specified classes in the package
                 System.out.println("Using the specified classes");
-                classList = (ArrayList) classesToUse.get(pkgName);
+                classList = classesToUse.get(pkgName);
             } else {
                 // Use all classes in the package
-                classList = new LinkedList(Arrays.asList(pd[i].allClasses()));
+                classList = new ArrayList<>(Arrays.asList(packageDoc.allClasses()));
             }
             Collections.sort(classList);
-            ClassDoc[] classes = new ClassDoc[classList.size()];
-            classes = (ClassDoc[]) classList.toArray(classes);
+            ClassDoc[] classes = classList.toArray(new ClassDoc[0]);
             processClasses(classes, pkgName);
 
-            addPkgDocumentation(root, pd[i], 2);
+            addPkgDocumentation(root, packageDoc, 2);
 
             outputFile.println("</package>");
         }
@@ -308,13 +305,13 @@ public class RootDocToXML {
         if (cd.length == 0)
             return;
         if (trace) System.out.println("PROCESSING CLASSES, number=" + cd.length);
-        for (int i = 0; i < cd.length; i++) {
-            String className = cd[i].name();
+        for (ClassDoc classDoc : cd) {
+            String className = classDoc.name();
             if (trace) System.out.println("PROCESSING CLASS/IFC: " + className);
             // Only save the shown elements
-            if (!shownElement(cd[i], classVisibilityLevel))
+            if (!shownElement(classDoc, classVisibilityLevel))
                 continue;
-            boolean isInterface = cd[i].isInterface();
+            boolean isInterface = classDoc.isInterface();
             if (isInterface) {
                 outputFile.println("  <!-- start interface " + pkgName + "." + className + " -->");
                 outputFile.print("  <interface name=\"" + className + "\"");
@@ -323,19 +320,19 @@ public class RootDocToXML {
                 outputFile.print("  <class name=\"" + className + "\"");
             }
             // Add attributes to the class element
-            Type parent = cd[i].superclassType();
+            Type parent = classDoc.superclassType();
             if (parent != null)
                 outputFile.println(" extends=\"" + buildEmittableTypeString(parent) + "\"");
-            outputFile.println("    abstract=\"" + cd[i].isAbstract() + "\"");
-            addCommonModifiers(cd[i], 4);
+            outputFile.println("    abstract=\"" + classDoc.isAbstract() + "\"");
+            addCommonModifiers(classDoc, 4);
             outputFile.println(">");
             // Process class members. (Treat inner classes as members.)
-            processInterfaces(cd[i].interfaceTypes());
-            processConstructors(cd[i].constructors());
-            processMethods(cd[i], cd[i].methods());
-            processFields(cd[i].fields());
+            processInterfaces(classDoc.interfaceTypes());
+            processConstructors(classDoc.constructors());
+            processMethods(classDoc, classDoc.methods());
+            processFields(classDoc.fields());
 
-            addDocumentation(cd[i], 4);
+            addDocumentation(classDoc, 4);
 
             if (isInterface) {
                 outputFile.println("  </interface>");
@@ -396,11 +393,7 @@ public class RootDocToXML {
                     // No useful comment
                     outputFile.print("deprecated=\"deprecated, no comment\"");
                 } else {
-                    String fs = null;
-                    if (idx == -1)
-                        fs = text;
-                    else
-                        fs = text.substring(0, idx + 1);
+                    String fs = idx == -1 ? text : text.substring(0, idx + 1);
                     String st = API.hideHTMLTags(fs);
                     outputFile.print("deprecated=\"" + st + "\"");
                 }
@@ -429,8 +422,8 @@ public class RootDocToXML {
         try {
             // Could cache the method for improved performance
             Class<? extends ProgramElementDoc> c = ProgramElementDoc.class;
-            Method m = c.getMethod("position", null);
-            Object sp = m.invoke(ped, null);
+            Method m = c.getMethod("position");
+            Object sp = m.invoke(ped);
             if (sp != null) {
                 for (int i = 0; i < indent; i++) outputFile.print(" ");
                 outputFile.println("src=\"" + sp + "\"");
@@ -457,8 +450,8 @@ public class RootDocToXML {
      */
     public void processInterfaces(Type[] ifaces) {
         if (trace) System.out.println("PROCESSING INTERFACES, number=" + ifaces.length);
-        for (int i = 0; i < ifaces.length; i++) {
-            String ifaceName = buildEmittableTypeString(ifaces[i]);
+        for (Type iface : ifaces) {
+            String ifaceName = buildEmittableTypeString(iface);
             if (trace) System.out.println("PROCESSING INTERFACE: " + ifaceName);
             outputFile.println("    <implements name=\"" + ifaceName + "\"/>");
         }//for
@@ -471,34 +464,34 @@ public class RootDocToXML {
      */
     public void processConstructors(ConstructorDoc[] ct) {
         if (trace) System.out.println("PROCESSING CONSTRUCTORS, number=" + ct.length);
-        for (int i = 0; i < ct.length; i++) {
-            String ctorName = ct[i].name();
+        for (ConstructorDoc constructorDoc : ct) {
+            String ctorName = constructorDoc.name();
             if (trace) System.out.println("PROCESSING CONSTRUCTOR: " + ctorName);
             // Only save the shown elements
-            if (!shownElement(ct[i], memberVisibilityLevel))
+            if (!shownElement(constructorDoc, memberVisibilityLevel))
                 continue;
             outputFile.print("    <constructor name=\"" + ctorName + "\"");
 
-            Parameter[] params = ct[i].parameters();
+            Parameter[] params = constructorDoc.parameters();
             boolean first = true;
             if (params.length != 0) {
                 outputFile.print(" type=\"");
-                for (int j = 0; j < params.length; j++) {
+                for (Parameter param : params) {
                     if (!first)
                         outputFile.print(", ");
-                    emitType(params[j].type());
+                    emitType(param.type());
                     first = false;
                 }
                 outputFile.println("\"");
             } else
                 outputFile.println();
-            addCommonModifiers(ct[i], 6);
+            addCommonModifiers(constructorDoc, 6);
             outputFile.println(">");
 
             // Generate the exception elements if any exceptions are thrown
-            processExceptions(ct[i].thrownExceptions());
+            processExceptions(constructorDoc.thrownExceptions());
 
-            addDocumentation(ct[i], 6);
+            addDocumentation(constructorDoc, 6);
 
             outputFile.println("    </constructor>");
         }//for
@@ -511,11 +504,11 @@ public class RootDocToXML {
      */
     public void processExceptions(ClassDoc[] cd) {
         if (trace) System.out.println("PROCESSING EXCEPTIONS, number=" + cd.length);
-        for (int i = 0; i < cd.length; i++) {
-            String exceptionName = cd[i].name();
+        for (ClassDoc classDoc : cd) {
+            String exceptionName = classDoc.name();
             if (trace) System.out.println("PROCESSING EXCEPTION: " + exceptionName);
             outputFile.print("      <exception name=\"" + exceptionName + "\" type=\"");
-            emitType(cd[i]);
+            emitType(classDoc);
             outputFile.println("\"/>");
         }//for
     }//processExceptions()
@@ -527,17 +520,17 @@ public class RootDocToXML {
      */
     public void processMethods(ClassDoc cd, MethodDoc[] md) {
         if (trace) System.out.println("PROCESSING " + cd.name() + " METHODS, number = " + md.length);
-        for (int i = 0; i < md.length; i++) {
-            String methodName = md[i].name();
+        for (MethodDoc methodDoc : md) {
+            String methodName = methodDoc.name();
             if (trace) System.out.println("PROCESSING METHOD: " + methodName);
             // Skip <init> and <clinit>
             if (methodName.startsWith("<"))
                 continue;
             // Only save the shown elements
-            if (!shownElement(md[i], memberVisibilityLevel))
+            if (!shownElement(methodDoc, memberVisibilityLevel))
                 continue;
             outputFile.print("    <method name=\"" + methodName + "\"");
-            com.sun.javadoc.Type retType = md[i].returnType();
+            Type retType = methodDoc.returnType();
             if (retType.qualifiedTypeName().compareTo("void") == 0) {
                 // Don't add a return attribute if the return type is void
                 outputFile.println();
@@ -546,24 +539,24 @@ public class RootDocToXML {
                 emitType(retType);
                 outputFile.println("\"");
             }
-            outputFile.print("      abstract=\"" + md[i].isAbstract() + "\"");
-            outputFile.print(" native=\"" + md[i].isNative() + "\"");
-            outputFile.println(" synchronized=\"" + md[i].isSynchronized() + "\"");
-            addCommonModifiers(md[i], 6);
+            outputFile.print("      abstract=\"" + methodDoc.isAbstract() + "\"");
+            outputFile.print(" native=\"" + methodDoc.isNative() + "\"");
+            outputFile.println(" synchronized=\"" + methodDoc.isSynchronized() + "\"");
+            addCommonModifiers(methodDoc, 6);
             outputFile.println(">");
             // Generate the parameter elements, if any
-            Parameter[] params = md[i].parameters();
-            for (int j = 0; j < params.length; j++) {
-                outputFile.print("      <param name=\"" + params[j].name() + "\"");
+            Parameter[] params = methodDoc.parameters();
+            for (Parameter param : params) {
+                outputFile.print("      <param name=\"" + param.name() + "\"");
                 outputFile.print(" type=\"");
-                emitType(params[j].type());
+                emitType(param.type());
                 outputFile.println("\"/>");
             }
 
             // Generate the exception elements if any exceptions are thrown
-            processExceptions(md[i].thrownExceptions());
+            processExceptions(methodDoc.thrownExceptions());
 
-            addDocumentation(md[i], 6);
+            addDocumentation(methodDoc, 6);
 
             outputFile.println("    </method>");
         }//for
@@ -576,28 +569,28 @@ public class RootDocToXML {
      */
     public void processFields(FieldDoc[] fd) {
         if (trace) System.out.println("PROCESSING FIELDS, number=" + fd.length);
-        for (int i = 0; i < fd.length; i++) {
-            String fieldName = fd[i].name();
+        for (FieldDoc fieldDoc : fd) {
+            String fieldName = fieldDoc.name();
             if (trace) System.out.println("PROCESSING FIELD: " + fieldName);
             // Only save the shown elements
-            if (!shownElement(fd[i], memberVisibilityLevel))
+            if (!shownElement(fieldDoc, memberVisibilityLevel))
                 continue;
             outputFile.print("    <field name=\"" + fieldName + "\"");
             outputFile.print(" type=\"");
-            emitType(fd[i].type());
+            emitType(fieldDoc.type());
             outputFile.println("\"");
-            outputFile.print("      transient=\"" + fd[i].isTransient() + "\"");
-            outputFile.println(" volatile=\"" + fd[i].isVolatile() + "\"");
+            outputFile.print("      transient=\"" + fieldDoc.isTransient() + "\"");
+            outputFile.println(" volatile=\"" + fieldDoc.isVolatile() + "\"");
             /* JDK 1.4 and later */
 /*
             String value = fd[i].constantValueExpression();
             if (value != null)
                 outputFile.println(" value=\"" + value + "\"");
 */
-            addCommonModifiers(fd[i], 6);
+            addCommonModifiers(fieldDoc, 6);
             outputFile.println(">");
 
-            addDocumentation(fd[i], 6);
+            addDocumentation(fieldDoc, 6);
 
             outputFile.println("    </field>");
 
@@ -678,7 +671,7 @@ public class RootDocToXML {
      * Determine if the program element is shown, according to the given
      * level of visibility.
      *
-     * @param ped      The given program element.
+     * @param doc      The given program element.
      * @param visLevel The desired visibility level; "public", "protected",
      *                 "package" or "private". If null, only check for an exclude tag.
      * @return boolean Set if this element is shown.
@@ -688,7 +681,7 @@ public class RootDocToXML {
         // then don't display it.
         if (doExclude && excludeTag != null && doc != null) {
             String rct = doc.getRawCommentText();
-            if (rct != null && rct.indexOf(excludeTag) != -1) {
+            if (rct != null && rct.contains(excludeTag)) {
                 return false;
             }
         }
@@ -818,8 +811,8 @@ public class RootDocToXML {
             rct = stripNonPrintingChars(rct, ped);
             rct = rct.trim();
             if (rct.compareTo("") != 0 &&
-                    rct.indexOf(Comments.placeHolderText) == -1 &&
-                    rct.indexOf("InsertOtherCommentsHere") == -1) {
+                    !rct.contains(Comments.placeHolderText) &&
+                    !rct.contains("InsertOtherCommentsHere")) {
                 int idx = endOfFirstSentence(rct);
                 if (idx == 0)
                     return;
@@ -832,8 +825,8 @@ public class RootDocToXML {
                 else
                     firstSentence = rct.substring(0, idx + 1);
                 boolean checkForAts = false;
-                if (checkForAts && firstSentence.indexOf("@") != -1 &&
-                        firstSentence.indexOf("@link") == -1) {
+                if (checkForAts && firstSentence.contains("@") &&
+                        !firstSentence.contains("@link")) {
                     System.out.println("Warning: @ tag seen in comment: " +
                             firstSentence);
                 }
@@ -865,9 +858,9 @@ public class RootDocToXML {
             // options and prepend it if it was.
             String srcLocation = null;
             String[][] options = root.options();
-            for (int opt = 0; opt < options.length; opt++) {
-                if ((options[opt][0]).compareTo("-sourcepath") == 0) {
-                    srcLocation = options[opt][1];
+            for (String[] option : options) {
+                if ((option[0]).compareTo("-sourcepath") == 0) {
+                    srcLocation = option[1];
                     break;
                 }
             }
@@ -891,29 +884,32 @@ public class RootDocToXML {
             if (!f2.exists()) {
                 filename += "l";
             }
-            FileInputStream f = new FileInputStream(filename);
-            BufferedReader d = new BufferedReader(new InputStreamReader(f));
-            String str = d.readLine();
-            // Ignore everything except the lines between <body> elements
-            boolean inBody = false;
-            while (str != null) {
-                if (!inBody) {
-                    if (str.toLowerCase().trim().startsWith("<body")) {
-                        inBody = true;
-                    }
-                    str = d.readLine(); // Get the next line
-                    continue; // Ignore the line
-                } else {
-                    if (str.toLowerCase().trim().startsWith("</body")) {
-                        inBody = false;
+            try(FileInputStream f = new FileInputStream(filename)) {
+                BufferedReader d = new BufferedReader(new InputStreamReader(f));
+                String str = d.readLine();
+                // Ignore everything except the lines between <body> elements
+                boolean inBody = false;
+                StringBuilder rctBuilder = null;
+                while (str != null) {
+                    if (!inBody) {
+                        if (str.toLowerCase().trim().startsWith("<body")) {
+                            inBody = true;
+                        }
+                        str = d.readLine(); // Get the next line
                         continue; // Ignore the line
+                    } else {
+                        if (str.toLowerCase().trim().startsWith("</body")) {
+                            inBody = false;
+                            continue; // Ignore the line
+                        }
                     }
+                    if (rctBuilder == null)
+                        rctBuilder = new StringBuilder(str).append("\n");
+                    else
+                        rctBuilder.append(str).append("\n");
+                    str = d.readLine();
                 }
-                if (rct == null)
-                    rct = str + "\n";
-                else
-                    rct += str + "\n";
-                str = d.readLine();
+                rct = rctBuilder != null? rctBuilder.toString() : null;
             }
         } catch (java.io.FileNotFoundException e) {
             // If it doesn't exist, that's fine
@@ -927,19 +923,15 @@ public class RootDocToXML {
             rct = stripNonPrintingChars(rct, pd);
             rct = rct.trim();
             if (rct.compareTo("") != 0 &&
-                    rct.indexOf(Comments.placeHolderText) == -1 &&
-                    rct.indexOf("InsertOtherCommentsHere") == -1) {
+                    !rct.contains(Comments.placeHolderText) &&
+                    !rct.contains("InsertOtherCommentsHere")) {
                 int idx = endOfFirstSentence(rct);
                 if (idx == 0)
                     return;
                 for (int i = 0; i < indent; i++) outputFile.print(" ");
                 outputFile.println("<doc>");
                 for (int i = 0; i < indent; i++) outputFile.print(" ");
-                String firstSentence = null;
-                if (idx == -1)
-                    firstSentence = rct;
-                else
-                    firstSentence = rct.substring(0, idx + 1);
+                String firstSentence = idx == -1 ? rct : rct.substring(0, idx + 1);
                 String firstSentenceNoTags = API.stuffHTMLTags(firstSentence);
                 outputFile.println(firstSentenceNoTags);
                 for (int i = 0; i < indent; i++) outputFile.print(" ");

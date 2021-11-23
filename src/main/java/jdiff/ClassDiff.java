@@ -2,7 +2,6 @@ package jdiff;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -13,6 +12,7 @@ import java.util.List;
  * @author Matthew Doar, mdoar@pobox.com
  */
 class ClassDiff {
+    public static ClassDiff[] EMPTY_ARRAY = new ClassDiff[0];
 
     /**
      * Name of the class.
@@ -27,58 +27,58 @@ class ClassDiff {
     /**
      * A string describing the changes in inheritance.
      */
-    public String inheritanceChange_ = null;
+    public String inheritanceChange_;
 
     /**
      * A string describing the changes in documentation.
      */
-    public String documentationChange_ = null;
+    public String documentationChange_;
 
     /**
      * A string describing the changes in modifiers.
      * Changes can be in whether this is a class or interface, whether it is
      * abstract, static, final, and in its visibility.
      */
-    public String modifiersChange_ = null;
+    public String modifiersChange_;
 
     /**
      * Constructors added in the new API.
      */
-    public List<ConstructorAPI> ctorsAdded = null;
+    public List<ConstructorAPI> ctorsAdded;
     /**
      * Constructors removed in the new API.
      */
-    public List<ConstructorAPI> ctorsRemoved = null;
+    public List<ConstructorAPI> ctorsRemoved;
     /**
      * Constructors changed in the new API.
      */
-    public List<MemberDiff> ctorsChanged = null;
+    public List<MemberDiff> ctorsChanged;
 
     /**
      * Methods added in the new API.
      */
-    public List<MethodAPI> methodsAdded = null;
+    public List<MethodAPI> methodsAdded;
     /**
      * Methods removed in the new API.
      */
-    public List<MethodAPI> methodsRemoved = null;
+    public List<MethodAPI> methodsRemoved;
     /**
      * Methods changed in the new API.
      */
-    public List<MemberDiff> methodsChanged = null;
+    public List<MemberDiff> methodsChanged;
 
     /**
      * Fields added in the new API.
      */
-    public List<FieldAPI> fieldsAdded = null;
+    public List<FieldAPI> fieldsAdded;
     /**
      * Fields removed in the new API.
      */
-    public List<FieldAPI> fieldsRemoved = null;
+    public List<FieldAPI> fieldsRemoved;
     /**
      * Fields changed in the new API.
      */
-    public List<MemberDiff> fieldsChanged = null;
+    public List<MemberDiff> fieldsChanged;
 
     /* The percentage difference for this class. */
     public double pdiff = 0.0;
@@ -91,16 +91,16 @@ class ClassDiff {
         isInterface_ = false;
 
         ctorsAdded = new ArrayList<>(); // ConstructorAPI[]
-        ctorsRemoved = new ArrayList<ConstructorAPI>(); // ConstructorAPI[]
-        ctorsChanged = new ArrayList<MemberDiff>(); // MemberDiff[]
+        ctorsRemoved = new ArrayList<>(); // ConstructorAPI[]
+        ctorsChanged = new ArrayList<>(); // MemberDiff[]
 
-        methodsAdded = new ArrayList<MethodAPI>(); // MethodAPI[]
-        methodsRemoved = new ArrayList<MethodAPI>(); // MethodAPI[]
+        methodsAdded = new ArrayList<>(); // MethodAPI[]
+        methodsRemoved = new ArrayList<>(); // MethodAPI[]
         methodsChanged = new ArrayList<>(); // MemberDiff[]
 
-        fieldsAdded = new ArrayList<FieldAPI>(); // FieldAPI[]
-        fieldsRemoved = new ArrayList<FieldAPI>(); // FieldAPI[]
-        fieldsChanged = new ArrayList<MemberDiff>(); // MemberDiff[]
+        fieldsAdded = new ArrayList<>(); // FieldAPI[]
+        fieldsRemoved = new ArrayList<>(); // FieldAPI[]
+        fieldsChanged = new ArrayList<>(); // MemberDiff[]
     }
 
     /**
@@ -119,29 +119,25 @@ class ClassDiff {
             hasContent = true;
         }
         // Check for implemented interfaces which were removed
-        String removedInterfaces = "";
+        StringBuilder removedInterfaces = new StringBuilder();
         int numRemoved = 0;
-        Iterator<String> iter = oldClass.implements_.iterator();
-        while (iter.hasNext()) {
-            String oldInterface = (iter.next());
+        for (String oldInterface : oldClass.implements_) {
             int idx = Collections.binarySearch(newClass.implements_, oldInterface);
             if (idx < 0) {
                 if (numRemoved != 0)
-                    removedInterfaces += ", ";
-                removedInterfaces += oldInterface;
+                    removedInterfaces.append(", ");
+                removedInterfaces.append(oldInterface);
                 numRemoved++;
             }
         }
-        String addedInterfaces = "";
+        StringBuilder addedInterfaces = new StringBuilder();
         int numAdded = 0;
-        iter = newClass.implements_.iterator();
-        while (iter.hasNext()) {
-            String newInterface = (iter.next());
+        for (String newInterface : newClass.implements_) {
             int idx = Collections.binarySearch(oldClass.implements_, newInterface);
             if (idx < 0) {
                 if (numAdded != 0)
-                    addedInterfaces += ", ";
-                addedInterfaces += newInterface;
+                    addedInterfaces.append(", ");
+                addedInterfaces.append(newInterface);
                 numAdded++;
             }
         }

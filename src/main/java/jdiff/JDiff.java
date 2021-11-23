@@ -187,7 +187,6 @@ public class JDiff extends Doclet {
             return;
         }
         int rc = runAnt(args);
-        return;
     }
 
     /**
@@ -204,17 +203,16 @@ public class JDiff extends Doclet {
      * @return The integer return code from running ANT.
      */
     public static int runAnt(String[] args) {
-        String className = null;
-        Class c = null;
+        Class<?> c;
         try {
-            className = "org.apache.tools.ant.Main";
+            String className = "org.apache.tools.ant.Main";
             c = Class.forName(className);
         } catch (ClassNotFoundException e1) {
             System.err.println("Error: ant.jar not found on the classpath");
             return -1;
         }
         try {
-            Class[] methodArgTypes = new Class[1];
+            Class<?>[] methodArgTypes = new Class[1];
             methodArgTypes[0] = args.getClass();
             Method mainMethod = c.getMethod("main", methodArgTypes);
             Object[] methodArgs = new Object[1];
@@ -222,7 +220,7 @@ public class JDiff extends Doclet {
             // The object can be null because the method is static
             Integer res = (Integer) mainMethod.invoke(null, methodArgs);
             System.gc(); // Clean up after running ANT
-            return res.intValue();
+            return res;
         } catch (NoSuchMethodException e2) {
             System.err.println("Error: method \"main\" not found");
             e2.printStackTrace();

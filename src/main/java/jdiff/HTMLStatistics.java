@@ -4,8 +4,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -28,15 +26,16 @@ public class HTMLStatistics {
     /**
      * The HTMLReportGenerator instance used to write HTML.
      */
-    private HTMLReportGenerator h_ = null;
+    private HTMLReportGenerator h_;
 
     /**
      * Emit the statistics HTML file.
      */
     public void emitStatistics(String filename, APIDiff apiDiff) {
-        try {
-            FileOutputStream fos = new FileOutputStream(filename);
-            HTMLReportGenerator.reportFile = new PrintWriter(fos);
+        try(FileOutputStream fos = new FileOutputStream(filename);
+            PrintWriter writer = new PrintWriter(fos)
+        ) {
+            HTMLReportGenerator.reportFile = writer;
             // Write out the HTML header
             h_.writeStartHTMLHeader();
             // Write out the title
@@ -127,7 +126,6 @@ public class HTMLStatistics {
             emitNumbersByElement(apiDiff);
 
             h_.writeText("</HTML>");
-            HTMLReportGenerator.reportFile.close();
         } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + filename);
             System.out.println("Error: " + e.getMessage());
@@ -141,7 +139,7 @@ public class HTMLStatistics {
      */
     public void emitPackagesByDiff(APIDiff apiDiff) {
 
-        Collections.sort(apiDiff.packagesChanged, new ComparePkgPdiffs());
+        apiDiff.packagesChanged.sort(new ComparePkgPdiffs());
 
         // Write out the table start
         h_.writeText("<TABLE summary=\"Packages sorted by percentage difference\" BORDER=\"1\" WIDTH=\"100%\" cellspacing=\"0\" cellpadding=\"0\">");
@@ -155,9 +153,7 @@ public class HTMLStatistics {
             hist[i] = 0;
         }
 
-        Iterator<PackageDiff> iter = apiDiff.packagesChanged.iterator();
-        while (iter.hasNext()) {
-            PackageDiff pkg = (iter.next());
+        for (PackageDiff pkg : apiDiff.packagesChanged) {
             int bucket = (int) (pkg.pdiff);
             hist[bucket]++;
             h_.writeText("<TR>");
@@ -212,22 +208,18 @@ public class HTMLStatistics {
      */
     public void emitClassesByDiff(APIDiff apiDiff) {
         // Add all the changed classes to a list
-        List allChangedClasses = new ArrayList();
-        Iterator iter = apiDiff.packagesChanged.iterator();
-        while (iter.hasNext()) {
-            PackageDiff pkg = (PackageDiff) (iter.next());
+        List<ClassDiff> allChangedClasses = new ArrayList<>();
+        for (PackageDiff pkg: apiDiff.packagesChanged) {
             if (pkg.classesChanged != null) {
                 // Add the package name to the class name
-                List cc = new ArrayList(pkg.classesChanged);
-                Iterator iter2 = cc.iterator();
-                while (iter2.hasNext()) {
-                    ClassDiff classDiff = (ClassDiff) (iter2.next());
+                List<ClassDiff> cc = new ArrayList<>(pkg.classesChanged);
+                for (ClassDiff classDiff : cc) {
                     classDiff.name_ = pkg.name_ + "." + classDiff.name_;
                 }
                 allChangedClasses.addAll(cc);
             }
         }
-        Collections.sort(allChangedClasses, new CompareClassPdiffs());
+        allChangedClasses.sort(new CompareClassPdiffs());
 
         // Write out the table start
         h_.writeText("<TABLE summary=\"Classes sorted by percentage difference\" BORDER=\"1\" WIDTH=\"100%\" cellspacing=\"0\" cellpadding=\"0\">");
@@ -241,9 +233,7 @@ public class HTMLStatistics {
             hist[i] = 0;
         }
 
-        iter = allChangedClasses.iterator();
-        while (iter.hasNext()) {
-            ClassDiff classDiff = (ClassDiff) (iter.next());
+        for (ClassDiff classDiff : allChangedClasses) {
             int bucket = (int) (classDiff.pdiff);
             hist[bucket]++;
             h_.writeText("<TR>");
@@ -328,16 +318,12 @@ public class HTMLStatistics {
         int numChanged = 0;
 
         // Calculate the values
-        Iterator<PackageDiff> iter = apiDiff.packagesChanged.iterator();
-        while (iter.hasNext()) {
-            PackageDiff pkg = (iter.next());
+        for (PackageDiff pkg : apiDiff.packagesChanged) {
             numClassesRemoved += pkg.classesRemoved.size();
             numClassesAdded += pkg.classesAdded.size();
             numClassesChanged += pkg.classesChanged.size();
 
-            Iterator<ClassDiff> iter2 = pkg.classesChanged.iterator();
-            while (iter2.hasNext()) {
-                ClassDiff classDiff = (iter2.next());
+            for (ClassDiff classDiff : pkg.classesChanged) {
                 numCtorsRemoved += classDiff.ctorsRemoved.size();
                 numCtorsAdded += classDiff.ctorsAdded.size();
                 numCtorsChanged += classDiff.ctorsChanged.size();

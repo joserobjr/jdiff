@@ -2,7 +2,6 @@ package jdiff;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -11,7 +10,7 @@ import java.util.List;
  * RootDoc could have been used for representing this, but
  * you cannot serialize a RootDoc object - see
  * http://developer.java.sun.com/developer/bugParade/bugs/4125581.html
- * You might be able use Javadoc.Main() to create another RootDoc, but the
+ * You might be able to use Javadoc.Main() to create another RootDoc, but the
  * methods are package private. You can run javadoc in J2SE1.4, see:
  * http://java.sun.com/j2se/1.4/docs/tooldocs/javadoc/standard-doclet.html#runningprogrammatically
  * but you still can't get the RootDoc object.
@@ -73,7 +72,7 @@ public class API {
      */
     public API() {
         packages_ = new ArrayList<>(); //PackageAPI[]
-        classes_ = new Hashtable<String, ClassAPI>(); //ClassAPI
+        classes_ = new Hashtable<>(); //ClassAPI
     }
 
 //
@@ -90,9 +89,8 @@ public class API {
      */
     public void dump() {
         int indent = 0;
-        Iterator<PackageAPI> iter = packages_.iterator();
-        while (iter.hasNext()) {
-            dumpPackage((iter.next()), indent);
+        for (PackageAPI packageAPI : packages_) {
+            dumpPackage(packageAPI, indent);
         }
     }
 
@@ -105,9 +103,8 @@ public class API {
     public void dumpPackage(PackageAPI pkg, int indent) {
         for (int i = 0; i < indent; i++) System.out.print(" ");
         System.out.println("Package Name: " + pkg.name_);
-        Iterator<ClassAPI> iter = pkg.classes_.iterator();
-        while (iter.hasNext()) {
-            dumpClass((iter.next()), indent + indentInc);
+        for (ClassAPI classAPI : pkg.classes_) {
+            dumpClass(classAPI, indent + indentInc);
         }
         // Display documentation
         if (pkg.doc_ != null) {
@@ -135,9 +132,7 @@ public class API {
         if (c.implements_.size() != 0) {
             for (int i = 0; i < indent; i++) System.out.print(" ");
             System.out.println("Implements: ");
-            Iterator<String> iter = c.implements_.iterator();
-            while (iter.hasNext()) {
-                String interfaceImpl = (iter.next());
+            for (String interfaceImpl : c.implements_) {
                 for (int i = 0; i < indent + 2; i++) System.out.print(" ");
                 System.out.println("  " + interfaceImpl);
             }
@@ -147,20 +142,17 @@ public class API {
             System.out.print("abstract ");
         // Dump modifiers common to all
         dumpModifiers(c.modifiers_, indent);
-        // Dump ctors
-        Iterator iter = c.ctors_.iterator();
-        while (iter.hasNext()) {
-            dumpCtor((ConstructorAPI) (iter.next()), indent + indentInc);
+        // Dump constructors
+        for (ConstructorAPI constructorAPI : c.ctors_) {
+            dumpCtor(constructorAPI, indent + indentInc);
         }
         // Dump methods
-        iter = c.methods_.iterator();
-        while (iter.hasNext()) {
-            dumpMethod((MethodAPI) (iter.next()), indent + indentInc);
+        for (MethodAPI methodAPI : c.methods_) {
+            dumpMethod(methodAPI, indent + indentInc);
         }
         // Dump fields
-        iter = c.fields_.iterator();
-        while (iter.hasNext()) {
-            dumpField((FieldAPI) (iter.next()), indent + indentInc);
+        for (FieldAPI fieldAPI : c.fields_) {
+            dumpField(fieldAPI, indent + indentInc);
         }
         // Display documentation
         if (c.doc_ != null) {
@@ -237,9 +229,8 @@ public class API {
         // Dump modifiers common to all
         dumpModifiers(m.modifiers_, indent);
 
-        Iterator<ParamAPI> iter = m.params_.iterator();
-        while (iter.hasNext()) {
-            dumpParam((iter.next()), indent + indentInc);
+        for (ParamAPI paramAPI : m.params_) {
+            dumpParam(paramAPI, indent + indentInc);
         }
         // Display documentation
         if (m.doc_ != null) {
@@ -291,7 +282,7 @@ public class API {
      * parser.
      */
     public static String stuffHTMLTags(String htmlText) {
-        if (htmlText.indexOf("]]>") != -1) {
+        if (htmlText.contains("]]>")) {
             System.out.println("Warning: illegal string ]]> found in text. Ignoring the comment.");
             return "";
         }
@@ -309,7 +300,7 @@ public class API {
      * string "qUoTe_cHaR".
      */
     public static String hideHTMLTags(String htmlText) {
-        StringBuffer sb = new StringBuffer(htmlText);
+        StringBuilder sb = new StringBuilder(htmlText);
         int i = 0;
         while (i < sb.length()) {
             if (sb.charAt(i) == '<') {
@@ -331,8 +322,8 @@ public class API {
      * Convert text with stuffed HTML tags ("lEsS_tHaN", etc) into HTML text.
      */
     public static String showHTMLTags(String text) {
-        StringBuffer sb = new StringBuffer(text);
-        StringBuffer res = new StringBuffer();
+        StringBuilder sb = new StringBuilder(text);
+        StringBuilder res = new StringBuilder();
         int len = sb.length();
         res.setLength(len);
         int i = 0;
@@ -401,8 +392,9 @@ public class API {
      * the resulting XML is not as elegant, it does the job with less
      * intervention by the user.
      */
+    @SuppressWarnings("unused")
     public static String convertHTMLTagsToXHTML(String htmlText) {
-        StringBuffer sb = new StringBuffer(htmlText);
+        StringBuilder sb = new StringBuilder(htmlText);
         int i = 0;
         boolean inTag = false;
         String tag = null;
@@ -411,8 +403,8 @@ public class API {
             char c = sb.charAt(i);
             if (inTag) {
                 if (c == '>') {
-                    // OPTION Could fail at or fix some errorneous tags here
-                    // Make the best guess as to whether this tag is terminated
+                    // OPTION Could fail at or fix some erroneous tags here
+                    // Make the best guess whether this tag is terminated
                     if (Comments.isMinimizedTag(tag) &&
                             htmlText.indexOf("</" + tag + ">", i) == -1)
                         sb.insert(i, "/");

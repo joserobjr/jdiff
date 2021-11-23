@@ -27,22 +27,22 @@ class FieldAPI implements Comparable<FieldAPI> {
      * inherited from. If this is null, then the field is defined locally
      * in this class or interface.
      */
-    public String inheritedFrom_ = null;
+    public String inheritedFrom_;
 
     /**
      * Set if this field is transient.
      */
-    public boolean isTransient_ = false;
+    public boolean isTransient_;
 
     /**
      * Set if this field is volatile.
      */
-    public boolean isVolatile_ = false;
+    public boolean isVolatile_;
 
     /**
      * If non-null, this is the value of this field.
      */
-    public String value_ = null;
+    public String value_;
 
     /**
      * Modifiers for this class.
@@ -52,7 +52,7 @@ class FieldAPI implements Comparable<FieldAPI> {
     /**
      * The doc block, default is null.
      */
-    public String doc_ = null;
+    public String doc_;
 
     /**
      * Constructor.
@@ -117,6 +117,6 @@ class FieldAPI implements Comparable<FieldAPI> {
      * Tests two fields, using just the field name, used by indexOf().
      */
     public boolean equals(Object o) {
-        return name_.compareTo(((FieldAPI) o).name_) == 0;
+        return this == o || o instanceof FieldAPI && name_.compareTo(((FieldAPI) o).name_) == 0;
     }
 }  

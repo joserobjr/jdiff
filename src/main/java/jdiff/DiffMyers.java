@@ -49,7 +49,7 @@ public class DiffMyers {
      * an edit script, if desired.
      */
     public DiffMyers(Object[] a, Object[] b) {
-        Hashtable<Object, Integer> h = new Hashtable<Object, Integer>(a.length + b.length);
+        Hashtable<Object, Integer> h = new Hashtable<>(a.length + b.length);
         filevec[0] = new file_data(a, h);
         filevec[1] = new file_data(b, h);
     }
@@ -144,14 +144,14 @@ public class DiffMyers {
             else
                 --fmax;
             for (d = fmax; d >= fmin; d -= 2) {
-                int x, y, oldx, tlo = fd[fdiagoff + d - 1], thi = fd[fdiagoff + d + 1];
+                int x, tlo = fd[fdiagoff + d - 1], thi = fd[fdiagoff + d + 1];
 
                 if (tlo >= thi)
                     x = tlo + 1;
                 else
                     x = thi;
-                oldx = x;
-                y = x - d;
+                int oldx = x;
+                int y = x - d;
                 while (x < xlim && y < ylim && xv[x] == yv[y]) {
                     ++x;
                     ++y;
@@ -175,14 +175,14 @@ public class DiffMyers {
             else
                 --bmax;
             for (d = bmax; d >= bmin; d -= 2) {
-                int x, y, oldx, tlo = bd[bdiagoff + d - 1], thi = bd[bdiagoff + d + 1];
+                int x, tlo = bd[bdiagoff + d - 1], thi = bd[bdiagoff + d + 1];
 
                 if (tlo < thi)
                     x = tlo;
                 else
                     x = thi - 1;
-                oldx = x;
-                y = x - d;
+                int oldx = x;
+                int y = x - d;
                 while (x > xoff && y > yoff && xv[x - 1] == yv[y - 1]) {
                     --x;
                     --y;
@@ -579,7 +579,6 @@ public class DiffMyers {
          * @param counts The count of each equivalence number for the other file.
          * @return 0=nondiscardable, 1=discardable or 2=provisionally discardable
          * for each line
-         * @see equivCount()
          */
 
         private byte[] discardable(final int[] counts) {
@@ -595,10 +594,9 @@ public class DiffMyers {
                 many *= 2;
 
             for (int i = 0; i < end; i++) {
-                int nmatch;
                 if (equivs[i] == 0)
                     continue;
-                nmatch = counts[equivs[i]];
+                int nmatch = counts[equivs[i]];
                 if (nmatch == 0)
                     discards[i] = 1;
                 else if (nmatch > many)
@@ -623,7 +621,6 @@ public class DiffMyers {
                 else if (discards[i] != 0) {
                     /* We have found a nonprovisional discard.  */
                     int j;
-                    int length;
                     int provisional = 0;
 
                 /* Find end of this run of discardable lines.
@@ -643,7 +640,7 @@ public class DiffMyers {
 
                 /* Now we have the length of a run of discardable lines
                    whose first and last are not provisional.  */
-                    length = j - i;
+                    int length = j - i;
 
                 /* If 1/4 of the lines in the run are provisional,
                    cancel discarding of all provisional lines in the run.  */
@@ -742,9 +739,9 @@ public class DiffMyers {
             for (int i = 0; i < data.length; ++i) {
                 Integer ir = h.get(data[i]);
                 if (ir == null)
-                    h.put(data[i], new Integer(equivs[i] = equiv_max++));
+                    h.put(data[i], equivs[i] = equiv_max++);
                 else
-                    equivs[i] = ir.intValue();
+                    equivs[i] = ir;
             }
         }
 
@@ -773,7 +770,7 @@ public class DiffMyers {
             int other_preceding = -1;
 
             for (; ; ) {
-                int start, end, other_start;
+                int end;
 
           /* Scan forwards to find beginning of another run of changes.
              Also keep track of the corresponding point in the other file.  */
@@ -789,8 +786,8 @@ public class DiffMyers {
                 if (i == i_end)
                     break;
 
-                start = i;
-                other_start = j;
+                int start = i;
+                int other_start = j;
 
                 for (; ; ) {
                     /* Now find the end of this run of changes.  */
@@ -810,7 +807,6 @@ public class DiffMyers {
                     if (end != i_end
                             && equivs[start] == equivs[end]
                             && !other_changed[1 + j]
-                            && end != i_end
                             && !((preceding >= 0 && start == preceding)
                             || (other_preceding >= 0
                             && other_start == other_preceding))) {

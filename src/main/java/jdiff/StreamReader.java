@@ -32,7 +32,7 @@ class StreamReader extends Thread {
         try {
             InputStreamReader isr = new InputStreamReader(is_);
             BufferedReader br = new BufferedReader(isr);
-            String line = null;
+            String line;
             while ((line = br.readLine()) != null)
                 System.out.println(line);
         } catch (IOException ioe) {

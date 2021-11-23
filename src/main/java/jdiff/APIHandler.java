@@ -32,7 +32,7 @@ class APIHandler extends DefaultHandler {
     /**
      * If set, then check that each comment is a sentence.
      */
-    public static boolean checkIsSentence = false;
+    public static boolean checkIsSentence;
 
     /**
      * Contains the name of the current package element type
@@ -40,33 +40,33 @@ class APIHandler extends DefaultHandler {
      * at which to add documentation into an element, i.e. class-level
      * or package-level.
      */
-    private String currentElement = null;
+    private String currentElement;
 
     /**
      * If set, then create the global list of comments.
      */
-    private boolean createGlobalComments_ = false;
+    private boolean createGlobalComments_;
 
     /**
      * Set if inside a doc element.
      */
-    private boolean inDoc = false;
+    private boolean inDoc;
 
     /**
      * The current comment text being assembled.
      */
-    private String currentText = null;
+    private String currentText;
 
     /**
      * The current text from deprecation, null if empty.
      */
-    private String currentDepText = null;
+    private String currentDepText;
 
     /**
      * The stack of SingleComment objects awaiting the comment text
      * currently being assembled.
      */
-    private LinkedList<String> tagStack = null;
+    private LinkedList<String> tagStack;
 
     /**
      * Called at the start of the document.
@@ -280,27 +280,26 @@ class APIHandler extends DefaultHandler {
      */
     public void addStartTagToText(String localName, Attributes attributes) {
         // Need to insert the HTML tag into the current text
-        String currentHTMLTag = localName;
         // Save the tag in a stack
-        tagStack.add(currentHTMLTag);
-        String tag = "<" + currentHTMLTag;
+        tagStack.add(localName);
+        StringBuilder tag = new StringBuilder("<" + localName);
         // Now add all the attributes into the current text
         int len = attributes.getLength();
         for (int i = 0; i < len; i++) {
             String name = attributes.getLocalName(i);
             String value = attributes.getValue(i);
-            tag += " " + name + "=\"" + value + "\"";
+            tag.append(" ").append(name).append("=\"").append(value).append("\"");
         }
 
         // End the tag
-        if (Comments.isMinimizedTag(currentHTMLTag)) {
-            tag += "/>";
+        if (Comments.isMinimizedTag(localName)) {
+            tag.append("/>");
         } else {
-            tag += ">";
+            tag.append(">");
         }
         // Now insert the HTML tag into the current text
         if (currentText == null)
-            currentText = tag;
+            currentText = tag.toString();
         else
             currentText += tag;
     }
@@ -308,6 +307,7 @@ class APIHandler extends DefaultHandler {
     /**
      * Add the end tag to the current comment text.
      */
+    @SuppressWarnings("unused")
     public void addEndTagToText(String localName) {
         // Close the current HTML tag
         String currentHTMLTag = (tagStack.removeLast());
@@ -325,7 +325,7 @@ class APIHandler extends DefaultHandler {
         modifiers.isDeprecated = false;
         String cdt = attributes.getValue("deprecated");
         if (cdt.compareTo("not deprecated") == 0) {
-            modifiers.isDeprecated = false;
+            //modifiers.isDeprecated = false;
             currentDepText = null;
         } else if (cdt.compareTo("deprecated, no comment") == 0) {
             modifiers.isDeprecated = true;

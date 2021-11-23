@@ -165,18 +165,18 @@ class Diff {
      */
     static String addDiffs(String[] oldDocWords, String[] newDocWords,
                            DiffMyers.change script, String text) {
-        String res = text;
+        StringBuilder res = new StringBuilder(text);
         DiffMyers.change hunk = script;
         int startOld = 0;
         if (trace) {
             System.out.println("Old Text:");
-            for (int i = 0; i < oldDocWords.length; i++) {
-                System.out.print(oldDocWords[i]);
+            for (String oldDocWord : oldDocWords) {
+                System.out.print(oldDocWord);
             }
             System.out.println(":END");
             System.out.println("New Text:");
-            for (int i = 0; i < newDocWords.length; i++) {
-                System.out.print(newDocWords[i]);
+            for (String newDocWord : newDocWords) {
+                System.out.print(newDocWord);
             }
             System.out.println(":END");
         }
@@ -209,7 +209,7 @@ class Diff {
 
             // Emit the original document up to this change
             for (int i = startOld; i < first0; i++) {
-                res += oldDocWords[i];
+                res.append(oldDocWords[i]);
             }
             // Record where to start the next hunk from
             startOld = last0 + 1;
@@ -222,19 +222,19 @@ class Diff {
                             !oldDocWords[i].endsWith(">")) {
                         if (!inStrike) {
                             if (deleteEffect == 0)
-                                res += "<strike>";
+                                res.append("<strike>");
                             else if (deleteEffect == 1)
-                                res += "<span style=\"background: #FFCCCC\">";
+                                res.append("<span style=\"background: #FFCCCC\">");
                             inStrike = true;
                         }
-                        res += oldDocWords[i];
+                        res.append(oldDocWords[i]);
                     }
                 }
                 if (inStrike) {
                     if (deleteEffect == 0)
-                        res += "</strike>";
+                        res.append("</strike>");
                     else if (deleteEffect == 1)
-                        res += "</span>";
+                        res.append("</span>");
                 }
             }
             // Emit the inserted words, but do not emphasise new HTML tags
@@ -245,27 +245,27 @@ class Diff {
                             !newDocWords[i].endsWith(">")) {
                         if (!inEmph) {
                             if (insertEffect == 0)
-                                res += "<font color=\"red\">";
+                                res.append("<font color=\"red\">");
                             else if (insertEffect == 1)
-                                res += "<span style=\"background: #FFFF00\">";
+                                res.append("<span style=\"background: #FFFF00\">");
                             inEmph = true;
                         }
                     }
-                    res += newDocWords[i];
+                    res.append(newDocWords[i]);
                 }
                 if (inEmph) {
                     if (insertEffect == 0)
-                        res += "</font>";
+                        res.append("</font>");
                     else if (insertEffect == 1)
-                        res += "</span>";
+                        res.append("</span>");
                 }
             }
         } //for (; hunk != null; hunk = hunk.link)
         // Print out the remaining part of the old text
         for (int i = startOld; i < oldDocWords.length; i++) {
-            res += oldDocWords[i];
+            res.append(oldDocWords[i]);
         }
-        return res;
+        return res.toString();
     }
 
     /**

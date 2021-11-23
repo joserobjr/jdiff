@@ -29,7 +29,7 @@ class ClassAPI implements Comparable<ClassAPI> {
     /**
      * Set if this class is abstract.
      */
-    boolean isAbstract_ = false;
+    boolean isAbstract_;
 
     /**
      * Modifiers for this class.
@@ -64,7 +64,7 @@ class ClassAPI implements Comparable<ClassAPI> {
     /**
      * The doc block, default is null.
      */
-    public String doc_ = null;
+    public String doc_;
 
     /**
      * Constructor.
@@ -77,7 +77,7 @@ class ClassAPI implements Comparable<ClassAPI> {
         isAbstract_ = isAbstract;
         modifiers_ = modifiers;
 
-        implements_ = new ArrayList<String>(); // String[]
+        implements_ = new ArrayList<>(); // String[]
         ctors_ = new ArrayList<>(); // ConstructorAPI[]
         methods_ = new ArrayList<>(); // MethodAPI[]
         fields_ = new ArrayList<>(); // FieldAPI[]
@@ -107,7 +107,7 @@ class ClassAPI implements Comparable<ClassAPI> {
      * used by indexOf().
      */
     public boolean equals(Object o) {
-        return name_.compareTo(((ClassAPI) o).name_) == 0;
+        return this == o || o instanceof ClassAPI && name_.compareTo(((ClassAPI) o).name_) == 0;
     }
 
 }

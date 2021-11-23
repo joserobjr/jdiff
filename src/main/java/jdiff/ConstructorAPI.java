@@ -16,7 +16,7 @@ class ConstructorAPI implements Comparable<ConstructorAPI> {
      * The type of the constructor, being all the parameter types
      * separated by commas.
      */
-    public String type_ = null;
+    public String type_;
 
     /**
      * The exceptions thrown by this constructor, being all the exception types
@@ -32,7 +32,7 @@ class ConstructorAPI implements Comparable<ConstructorAPI> {
     /**
      * The doc block, default is null.
      */
-    public String doc_ = null;
+    public String doc_;
 
     /**
      * Constructor.
@@ -64,6 +64,6 @@ class ConstructorAPI implements Comparable<ConstructorAPI> {
      * Tests two constructors, using just the type, used by indexOf().
      */
     public boolean equals(Object o) {
-        return type_.compareTo(((ConstructorAPI) o).type_) == 0;
+        return this == o || o instanceof ConstructorAPI && type_.compareTo(((ConstructorAPI) o).type_) == 0;
     }
 }  

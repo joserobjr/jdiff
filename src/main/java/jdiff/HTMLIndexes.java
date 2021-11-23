@@ -28,7 +28,7 @@ public class HTMLIndexes {
     /**
      * The HTMLReportGenerator instance used to write HTML.
      */
-    private HTMLReportGenerator h_ = null;
+    private HTMLReportGenerator h_;
 
     /**
      * Emit all the bottom left frame index files.
@@ -81,7 +81,10 @@ public class HTMLIndexes {
                                    APIDiff apiDiff, int indexType,
                                    String programElementType) {
         String filename = indexBaseName;
-        try {
+        try (FileOutputStream fos = new FileOutputStream(filename);
+             PrintWriter writer = new PrintWriter(fos)
+        ) {
+            HTMLReportGenerator.reportFile = writer;
             String title = "JDiff";
             if (indexType == 0) {
                 filename += "_removals" + HTMLReportGenerator.reportFileExt;
@@ -97,8 +100,6 @@ public class HTMLIndexes {
                 title = programElementType + " Differences Index";
             }
 
-            FileOutputStream fos = new FileOutputStream(filename);
-            HTMLReportGenerator.reportFile = new PrintWriter(fos);
             h_.writeStartHTMLHeader();
             h_.writeHTMLTitle(title);
             h_.writeStyleSheetRef();
@@ -123,7 +124,6 @@ public class HTMLIndexes {
             }
 
             h_.writeHTMLFooter();
-            HTMLReportGenerator.reportFile.close();
         } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + filename);
             System.out.println("Error: " + e.getMessage());
@@ -137,20 +137,15 @@ public class HTMLIndexes {
      * with a link to the top of the index.
      * Caching the results of this function would save about 10s with large APIs.
      */
-    private void generateLetterIndex(List<Index> list, char currChar, boolean larger) {
+    private void generateLetterIndex(List<Index> list, char currChar, @SuppressWarnings("SameParameterValue") boolean larger) {
         if (larger)
             return; // Currently not using the larger functionality
         int size = -2;
+        //noinspection ConstantConditions
         if (larger)
             size = -1;
-        Iterator<Index> iter = null;
-        if (isAllNames)
-            iter = allNames.iterator();
-        else
-            iter = list.iterator();
         char oldsw = '\0';
-        while (iter.hasNext()) {
-            Index entry = (iter.next());
+        for (Index entry: isAllNames? allNames : list) {
             char sw = entry.name_.charAt(0);
             char swu = Character.toUpperCase(sw);
             if (swu != Character.toUpperCase(oldsw)) {
@@ -259,20 +254,20 @@ public class HTMLIndexes {
         boolean hasAdditions = apiDiff.packagesAdded.size() != 0;
         boolean hasChanges = apiDiff.packagesChanged.size() != 0;
         recordDiffs(hasRemovals, hasAdditions, hasChanges);
-        Iterator iter = apiDiff.packagesRemoved.iterator();
-        while ((indexType == 3 || indexType == 0) && iter.hasNext()) {
-            PackageAPI pkg = (PackageAPI) (iter.next());
-            packageNames.add(new Index(pkg.name_, 0));
+        if (indexType == 3 || indexType == 0) {
+            for (PackageAPI pkg : apiDiff.packagesRemoved) {
+                packageNames.add(new Index(pkg.name_, 0));
+            }
         }
-        iter = apiDiff.packagesAdded.iterator();
-        while ((indexType == 3 || indexType == 1) && iter.hasNext()) {
-            PackageAPI pkg = (PackageAPI) (iter.next());
-            packageNames.add(new Index(pkg.name_, 1));
+        if (indexType == 3 || indexType == 1) {
+            for (PackageAPI pkg : apiDiff.packagesAdded) {
+                packageNames.add(new Index(pkg.name_, 1));
+            }
         }
-        iter = apiDiff.packagesChanged.iterator();
-        while ((indexType == 3 || indexType == 2) && iter.hasNext()) {
-            PackageDiff pkg = (PackageDiff) (iter.next());
-            packageNames.add(new Index(pkg.name_, 2));
+        if (indexType == 3 || indexType == 2) {
+            for (PackageDiff pkg : apiDiff.packagesChanged) {
+                packageNames.add(new Index(pkg.name_, 2));
+            }
         }
         Collections.sort(packageNames);
 
@@ -285,10 +280,8 @@ public class HTMLIndexes {
         h_.writeText("<br>");
 
         // Package names are unique, so no need to check for duplicates.
-        iter = packageNames.iterator();
         char oldsw = '\0';
-        while (iter.hasNext()) {
-            Index pkg = (Index) (iter.next());
+        for (Index pkg : packageNames) {
             oldsw = emitPackageIndexEntry(pkg, oldsw);
         }
     }
@@ -413,7 +406,7 @@ public class HTMLIndexes {
                     missingSincesFile.println("NO DOC BLOCK: " + details);
                 else
                     System.out.println("Warning: the doc block for the new element: " + details + " is missing, so there is no @since tag");
-            } else if (currIndex.doc_.indexOf("@since") != -1) {
+            } else if (currIndex.doc_.contains("@since")) {
                 if (logMissingSinces)
                     missingSincesFile.println("OK: " + details);
             } else {
@@ -457,9 +450,7 @@ public class HTMLIndexes {
         boolean hasRemovals = false;
         boolean hasAdditions = false;
         boolean hasChanges = false;
-        Iterator<PackageDiff> iter = apiDiff.packagesChanged.iterator();
-        while (iter.hasNext()) {
-            PackageDiff pkgDiff = (iter.next());
+        for (PackageDiff pkgDiff : apiDiff.packagesChanged) {
             if (pkgDiff.classesRemoved.size() != 0)
                 hasRemovals = true;
             if (pkgDiff.classesAdded.size() != 0)
@@ -468,22 +459,22 @@ public class HTMLIndexes {
                 hasChanges = true;
             recordDiffs(hasRemovals, hasAdditions, hasChanges);
             String pkgName = pkgDiff.name_;
-            Iterator iterClass = pkgDiff.classesRemoved.iterator();
-            while ((indexType == 3 || indexType == 0) && iterClass.hasNext()) {
-                ClassAPI cls = (ClassAPI) (iterClass.next());
-                classNames.add(new Index(cls.name_, 0, pkgName, cls.isInterface_));
+            if (indexType == 3 || indexType == 0) {
+                for (ClassAPI cls : pkgDiff.classesRemoved) {
+                    classNames.add(new Index(cls.name_, 0, pkgName, cls.isInterface_));
+                }
             }
-            iterClass = pkgDiff.classesAdded.iterator();
-            while ((indexType == 3 || indexType == 1) && iterClass.hasNext()) {
-                ClassAPI cls = (ClassAPI) (iterClass.next());
-                Index idx = new Index(cls.name_, 1, pkgName, cls.isInterface_);
-                idx.doc_ = cls.doc_; // Used for checking @since
-                classNames.add(idx);
+            if (indexType == 3 || indexType == 1) {
+                for (ClassAPI cls : pkgDiff.classesAdded) {
+                    Index idx = new Index(cls.name_, 1, pkgName, cls.isInterface_);
+                    idx.doc_ = cls.doc_; // Used for checking @since
+                    classNames.add(idx);
+                }
             }
-            iterClass = pkgDiff.classesChanged.iterator();
-            while ((indexType == 3 || indexType == 2) && iterClass.hasNext()) {
-                ClassDiff cls = (ClassDiff) (iterClass.next());
-                classNames.add(new Index(cls.name_, 2, pkgName, cls.isInterface_));
+            if (indexType == 3 || indexType == 2) {
+                for (ClassDiff cls : pkgDiff.classesChanged) {
+                    classNames.add(new Index(cls.name_, 2, pkgName, cls.isInterface_));
+                }
             }
         }
         Collections.sort(classNames);
@@ -555,13 +546,9 @@ public class HTMLIndexes {
         boolean hasRemovals = false;
         boolean hasAdditions = false;
         boolean hasChanges = false;
-        Iterator<PackageDiff> iter = apiDiff.packagesChanged.iterator();
-        while (iter.hasNext()) {
-            PackageDiff pkgDiff = (iter.next());
+        for (PackageDiff pkgDiff : apiDiff.packagesChanged) {
             String pkgName = pkgDiff.name_;
-            Iterator<ClassDiff> iterClass = pkgDiff.classesChanged.iterator();
-            while (iterClass.hasNext()) {
-                ClassDiff classDiff = (iterClass.next());
+            for (ClassDiff classDiff : pkgDiff.classesChanged) {
                 if (classDiff.ctorsRemoved.size() != 0)
                     hasRemovals = true;
                 if (classDiff.ctorsAdded.size() != 0)
@@ -570,22 +557,22 @@ public class HTMLIndexes {
                     hasChanges = true;
                 recordDiffs(hasRemovals, hasAdditions, hasChanges);
                 String className = classDiff.name_;
-                Iterator iterCtor = classDiff.ctorsRemoved.iterator();
-                while ((indexType == 3 || indexType == 0) && iterCtor.hasNext()) {
-                    ConstructorAPI ctor = (ConstructorAPI) (iterCtor.next());
-                    ctorNames.add(new Index(className, 0, pkgName, ctor.type_));
+                if (indexType == 3 || indexType == 0) {
+                    for (ConstructorAPI ctor : classDiff.ctorsRemoved) {
+                        ctorNames.add(new Index(className, 0, pkgName, ctor.type_));
+                    }
                 }
-                iterCtor = classDiff.ctorsAdded.iterator();
-                while ((indexType == 3 || indexType == 1) && iterCtor.hasNext()) {
-                    ConstructorAPI ctor = (ConstructorAPI) (iterCtor.next());
-                    Index idx = new Index(className, 1, pkgName, ctor.type_);
-                    idx.doc_ = ctor.doc_; // Used for checking @since
-                    ctorNames.add(idx);
+                if (indexType == 3 || indexType == 1) {
+                    for (ConstructorAPI ctor : classDiff.ctorsAdded) {
+                        Index idx = new Index(className, 1, pkgName, ctor.type_);
+                        idx.doc_ = ctor.doc_; // Used for checking @since
+                        ctorNames.add(idx);
+                    }
                 }
-                iterCtor = classDiff.ctorsChanged.iterator();
-                while ((indexType == 3 || indexType == 2) && iterCtor.hasNext()) {
-                    MemberDiff ctor = (MemberDiff) (iterCtor.next());
-                    ctorNames.add(new Index(className, 2, pkgName, ctor.newType_));
+                if (indexType == 3 || indexType == 2) {
+                    for (MemberDiff ctor : classDiff.ctorsChanged) {
+                        ctorNames.add(new Index(className, 2, pkgName, ctor.newType_));
+                    }
                 }
             }
         }
@@ -656,13 +643,9 @@ public class HTMLIndexes {
         boolean hasRemovals = false;
         boolean hasAdditions = false;
         boolean hasChanges = false;
-        Iterator<PackageDiff> iter = apiDiff.packagesChanged.iterator();
-        while (iter.hasNext()) {
-            PackageDiff pkgDiff = (iter.next());
+        for (PackageDiff pkgDiff : apiDiff.packagesChanged) {
             String pkgName = pkgDiff.name_;
-            Iterator<ClassDiff> iterClass = pkgDiff.classesChanged.iterator();
-            while (iterClass.hasNext()) {
-                ClassDiff classDiff = (iterClass.next());
+            for (ClassDiff classDiff : pkgDiff.classesChanged) {
                 if (classDiff.methodsRemoved.size() != 0)
                     hasRemovals = true;
                 if (classDiff.methodsAdded.size() != 0)
@@ -671,22 +654,22 @@ public class HTMLIndexes {
                     hasChanges = true;
                 recordDiffs(hasRemovals, hasAdditions, hasChanges);
                 String className = classDiff.name_;
-                Iterator iterMeth = classDiff.methodsRemoved.iterator();
-                while ((indexType == 3 || indexType == 0) && iterMeth.hasNext()) {
-                    MethodAPI meth = (MethodAPI) (iterMeth.next());
-                    methNames.add(new Index(meth.name_, 0, pkgName, className, meth.getSignature()));
+                if (indexType == 3 || indexType == 0) {
+                    for (MethodAPI meth : classDiff.methodsRemoved) {
+                        methNames.add(new Index(meth.name_, 0, pkgName, className, meth.getSignature()));
+                    }
                 }
-                iterMeth = classDiff.methodsAdded.iterator();
-                while ((indexType == 3 || indexType == 1) && iterMeth.hasNext()) {
-                    MethodAPI meth = (MethodAPI) (iterMeth.next());
-                    Index idx = new Index(meth.name_, 1, pkgName, className, meth.getSignature());
-                    idx.doc_ = meth.doc_; // Used for checking @since
-                    methNames.add(idx);
+                if (indexType == 3 || indexType == 1) {
+                    for (MethodAPI meth : classDiff.methodsAdded) {
+                        Index idx = new Index(meth.name_, 1, pkgName, className, meth.getSignature());
+                        idx.doc_ = meth.doc_; // Used for checking @since
+                        methNames.add(idx);
+                    }
                 }
-                iterMeth = classDiff.methodsChanged.iterator();
-                while ((indexType == 3 || indexType == 2) && iterMeth.hasNext()) {
-                    MemberDiff meth = (MemberDiff) (iterMeth.next());
-                    methNames.add(new Index(meth.name_, 2, pkgName, className, meth.newSignature_));
+                if (indexType == 3 || indexType == 2) {
+                    for (MemberDiff meth : classDiff.methodsChanged) {
+                        methNames.add(new Index(meth.name_, 2, pkgName, className, meth.newSignature_));
+                    }
                 }
             }
         }
@@ -774,13 +757,9 @@ public class HTMLIndexes {
         boolean hasRemovals = false;
         boolean hasAdditions = false;
         boolean hasChanges = false;
-        Iterator<PackageDiff> iter = apiDiff.packagesChanged.iterator();
-        while (iter.hasNext()) {
-            PackageDiff pkgDiff = (iter.next());
+        for (PackageDiff pkgDiff : apiDiff.packagesChanged) {
             String pkgName = pkgDiff.name_;
-            Iterator<ClassDiff> iterClass = pkgDiff.classesChanged.iterator();
-            while (iterClass.hasNext()) {
-                ClassDiff classDiff = (iterClass.next());
+            for (ClassDiff classDiff : pkgDiff.classesChanged) {
                 if (classDiff.fieldsRemoved.size() != 0)
                     hasRemovals = true;
                 if (classDiff.fieldsAdded.size() != 0)
@@ -789,22 +768,22 @@ public class HTMLIndexes {
                     hasChanges = true;
                 recordDiffs(hasRemovals, hasAdditions, hasChanges);
                 String className = classDiff.name_;
-                Iterator iterField = classDiff.fieldsRemoved.iterator();
-                while ((indexType == 3 || indexType == 0) && iterField.hasNext()) {
-                    FieldAPI fld = (FieldAPI) (iterField.next());
-                    fieldNames.add(new Index(fld.name_, 0, pkgName, className, fld.type_, true));
+                if (indexType == 3 || indexType == 0) {
+                    for (FieldAPI fld : classDiff.fieldsRemoved) {
+                        fieldNames.add(new Index(fld.name_, 0, pkgName, className, fld.type_, true));
+                    }
                 }
-                iterField = classDiff.fieldsAdded.iterator();
-                while ((indexType == 3 || indexType == 1) && iterField.hasNext()) {
-                    FieldAPI fld = (FieldAPI) (iterField.next());
-                    Index idx = new Index(fld.name_, 1, pkgName, className, fld.type_, true);
-                    idx.doc_ = fld.doc_; // Used for checking @since
-                    fieldNames.add(idx);
+                if (indexType == 3 || indexType == 1) {
+                    for (FieldAPI fld : classDiff.fieldsAdded) {
+                        Index idx = new Index(fld.name_, 1, pkgName, className, fld.type_, true);
+                        idx.doc_ = fld.doc_; // Used for checking @since
+                        fieldNames.add(idx);
+                    }
                 }
-                iterField = classDiff.fieldsChanged.iterator();
-                while ((indexType == 3 || indexType == 2) && iterField.hasNext()) {
-                    MemberDiff fld = (MemberDiff) (iterField.next());
-                    fieldNames.add(new Index(fld.name_, 2, pkgName, className, fld.newType_, true));
+                if (indexType == 3 || indexType == 2) {
+                    for (MemberDiff fld : classDiff.fieldsChanged) {
+                        fieldNames.add(new Index(fld.name_, 2, pkgName, className, fld.newType_, true));
+                    }
                 }
             }
         }
@@ -1051,12 +1030,12 @@ class Index implements Comparable<Index> {
     /**
      * The name of the program element this Index object represents.
      */
-    public String ename_ = null;
+    public String ename_;
 
     /**
      * Name of the changed package, class or member.
      */
-    public String name_ = null;
+    public String name_;
 
     /**
      * Type of change. 0 = remove, 1 = add, 2 = change.
@@ -1066,27 +1045,27 @@ class Index implements Comparable<Index> {
     /**
      * Name of the changed package if name_ is a class name.
      */
-    public String pkgName_ = null;
+    public String pkgName_;
 
     /**
      * Set if this class is an interface.
      */
-    public boolean isInterface_ = false;
+    public boolean isInterface_;
 
     /**
      * The doc block of added elements, default is null.
      */
-    public String doc_ = null;
+    public String doc_;
 
     /**
      * The new member type. For methods, this is the signature.
      */
-    public String type_ = null;
+    public String type_;
 
     /**
      * The class name. Only used by methods.
      */
-    public String className_ = null;
+    public String className_;
 
     /**
      * Constructor for packages.

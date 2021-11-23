@@ -152,24 +152,24 @@ public class Options {
         ErrorHandler err = new ErrorHandler();
         if (trace)
             System.out.println("Command line arguments: ");
-        for (int i = 0; i < options.length; i++) {
-            for (int j = 0; j < options[i].length; j++) {
-                Options.cmdOptions += " " + options[i][j];
+        for (String[] strings : options) {
+            for (String string : strings) {
+                Options.cmdOptions += " " + string;
                 if (trace)
-                    System.out.print(" " + options[i][j]);
+                    System.out.print(" " + string);
             }
         }
         if (trace)
             System.out.println();
 
-        for (int i = 0; i < options.length; i++) {
-            if (options[i][0].equalsIgnoreCase("-apiname")) {
-                if (options[i].length < 2) {
+        for (String[] option : options) {
+            if (option[0].equalsIgnoreCase("-apiname")) {
+                if (option.length < 2) {
                     err.msg("No version identifier specified after -apiname option.");
                 } else if (JDiff.compareAPIs) {
                     err.msg("Use the -apiname option, or the -oldapi and -newapi options, but not both.");
                 } else {
-                    String filename = options[i][1];
+                    String filename = option[1];
                     RootDocToXML.apiIdentifier = filename;
                     filename = filename.replace(' ', '_');
                     RootDocToXML.outputFileName = filename + ".xml";
@@ -178,21 +178,21 @@ public class Options {
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-apidir")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-apidir")) {
+                if (option.length < 2) {
                     err.msg("No directory specified after -apidir option.");
                 } else {
-                    RootDocToXML.outputDirectory = options[i][1];
+                    RootDocToXML.outputDirectory = option[1];
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-oldapi")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-oldapi")) {
+                if (option.length < 2) {
                     err.msg("No version identifier specified after -oldapi option.");
                 } else if (JDiff.writeXML) {
                     err.msg("Use the -apiname or -oldapi option, but not both.");
                 } else {
-                    String filename = options[i][1];
+                    String filename = option[1];
                     filename = filename.replace(' ', '_');
                     JDiff.oldFileName = filename + ".xml";
                     JDiff.writeXML = false;
@@ -200,21 +200,21 @@ public class Options {
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-oldapidir")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-oldapidir")) {
+                if (option.length < 2) {
                     err.msg("No directory specified after -oldapidir option.");
                 } else {
-                    JDiff.oldDirectory = options[i][1];
+                    JDiff.oldDirectory = option[1];
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-newapi")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-newapi")) {
+                if (option.length < 2) {
                     err.msg("No version identifier specified after -newapi option.");
                 } else if (JDiff.writeXML) {
                     err.msg("Use the -apiname or -newapi option, but not both.");
                 } else {
-                    String filename = options[i][1];
+                    String filename = option[1];
                     filename = filename.replace(' ', '_');
                     JDiff.newFileName = filename + ".xml";
                     JDiff.writeXML = false;
@@ -222,51 +222,51 @@ public class Options {
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-newapidir")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-newapidir")) {
+                if (option.length < 2) {
                     err.msg("No directory specified after -newapidir option.");
                 } else {
-                    JDiff.newDirectory = options[i][1];
+                    JDiff.newDirectory = option[1];
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-d")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-d")) {
+                if (option.length < 2) {
                     err.msg("No directory specified after -d option.");
                 } else {
-                    HTMLReportGenerator.outputDir = options[i][1];
+                    HTMLReportGenerator.outputDir = option[1];
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-javadocnew")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-javadocnew")) {
+                if (option.length < 2) {
                     err.msg("No location specified after -javadocnew option.");
                 } else {
-                    HTMLReportGenerator.newDocPrefix = options[i][1];
+                    HTMLReportGenerator.newDocPrefix = option[1];
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-javadocold")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-javadocold")) {
+                if (option.length < 2) {
                     err.msg("No location specified after -javadocold option.");
                 } else {
-                    HTMLReportGenerator.oldDocPrefix = options[i][1];
+                    HTMLReportGenerator.oldDocPrefix = option[1];
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-baseuri")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-baseuri")) {
+                if (option.length < 2) {
                     err.msg("No base location specified after -baseURI option.");
                 } else {
-                    RootDocToXML.baseURI = options[i][1];
+                    RootDocToXML.baseURI = option[1];
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-excludeclass")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-excludeclass")) {
+                if (option.length < 2) {
                     err.msg("No level (public|protected|package|private) specified after -excludeclass option.");
                 } else {
-                    String level = options[i][1];
+                    String level = option[1];
                     if (level.compareTo("public") != 0 &&
                             level.compareTo("protected") != 0 &&
                             level.compareTo("package") != 0 &&
@@ -278,11 +278,11 @@ public class Options {
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-excludemember")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-excludemember")) {
+                if (option.length < 2) {
                     err.msg("No level (public|protected|package|private) specified after -excludemember option.");
                 } else {
-                    String level = options[i][1];
+                    String level = option[1];
                     if (level.compareTo("public") != 0 &&
                             level.compareTo("protected") != 0 &&
                             level.compareTo("package") != 0 &&
@@ -294,32 +294,32 @@ public class Options {
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-firstsentence")) {
+            if (option[0].equalsIgnoreCase("-firstsentence")) {
                 RootDocToXML.saveAllDocs = false;
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-docchanges")) {
+            if (option[0].equalsIgnoreCase("-docchanges")) {
                 HTMLReportGenerator.reportDocChanges = true;
                 Diff.noDocDiffs = false;
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-incompatible")) {
+            if (option[0].equalsIgnoreCase("-incompatible")) {
                 HTMLReportGenerator.incompatibleChangesOnly = true;
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-packagesonly")) {
+            if (option[0].equalsIgnoreCase("-packagesonly")) {
                 RootDocToXML.packagesOnly = true;
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-showallchanges")) {
+            if (option[0].equalsIgnoreCase("-showallchanges")) {
                 Diff.showAllChanges = true;
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-nosuggest")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-nosuggest")) {
+                if (option.length < 2) {
                     err.msg("No level (all|remove|add|change) specified after -nosuggest option.");
                 } else {
-                    String level = options[i][1];
+                    String level = option[1];
                     if (level.compareTo("all") != 0 &&
                             level.compareTo("remove") != 0 &&
                             level.compareTo("add") != 0 &&
@@ -341,49 +341,49 @@ public class Options {
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-checkcomments")) {
+            if (option[0].equalsIgnoreCase("-checkcomments")) {
                 APIHandler.checkIsSentence = true;
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-retainnonprinting")) {
+            if (option[0].equalsIgnoreCase("-retainnonprinting")) {
                 RootDocToXML.stripNonPrintables = false;
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-excludetag")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-excludetag")) {
+                if (option.length < 2) {
                     err.msg("No exclude tag specified after -excludetag option.");
                 } else {
-                    RootDocToXML.excludeTag = options[i][1];
+                    RootDocToXML.excludeTag = option[1];
                     RootDocToXML.excludeTag = RootDocToXML.excludeTag.trim();
                     RootDocToXML.doExclude = true;
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-stats")) {
+            if (option[0].equalsIgnoreCase("-stats")) {
                 HTMLReportGenerator.doStats = true;
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-doctitle")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-doctitle")) {
+                if (option.length < 2) {
                     err.msg("No HTML text specified after -doctitle option.");
                 } else {
-                    HTMLReportGenerator.docTitle = options[i][1];
+                    HTMLReportGenerator.docTitle = option[1];
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-windowtitle")) {
-                if (options[i].length < 2) {
+            if (option[0].equalsIgnoreCase("-windowtitle")) {
+                if (option.length < 2) {
                     err.msg("No text specified after -windowtitle option.");
                 } else {
-                    HTMLReportGenerator.windowTitle = options[i][1];
+                    HTMLReportGenerator.windowTitle = option[1];
                 }
                 continue;
             }
-            if (options[i][0].equalsIgnoreCase("-version")) {
+            if (option[0].equalsIgnoreCase("-version")) {
                 System.out.println("JDiff version: " + JDiff.version);
                 System.exit(0);
             }
-            if (options[i][0].equalsIgnoreCase("-help")) {
+            if (option[0].equalsIgnoreCase("-help")) {
                 usage();
                 System.exit(0);
             }

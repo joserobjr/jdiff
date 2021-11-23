@@ -17,31 +17,31 @@ class PackageDiff {
     /**
      * Classes added in the new API.
      */
-    public List<ClassAPI> classesAdded = null;
+    public List<ClassAPI> classesAdded;
     /**
      * Classes removed in the new API.
      */
-    public List<ClassAPI> classesRemoved = null;
+    public List<ClassAPI> classesRemoved;
     /**
      * Classes changed in the new API.
      */
-    public List<ClassDiff> classesChanged = null;
+    public List<ClassDiff> classesChanged;
 
     /**
      * A string describing the changes in documentation.
      */
-    public String documentationChange_ = null;
+    public String documentationChange_;
 
     /* The percentage difference for this package. */
-    public double pdiff = 0.0;
+    public double pdiff;
 
     /**
      * Default constructor.
      */
     public PackageDiff(String name) {
         name_ = name;
-        classesAdded = new ArrayList<ClassAPI>(); // ClassAPI[]
-        classesRemoved = new ArrayList<ClassAPI>(); // ClassAPI[]
+        classesAdded = new ArrayList<>(); // ClassAPI[]
+        classesRemoved = new ArrayList<>(); // ClassAPI[]
         classesChanged = new ArrayList<>(); // ClassDiff[]
     }
 }

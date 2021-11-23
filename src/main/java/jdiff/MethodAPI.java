@@ -1,7 +1,6 @@
 package jdiff;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -20,19 +19,19 @@ class MethodAPI implements Comparable<MethodAPI> {
     /**
      * Name of the method.
      */
-    public String name_ = null;
+    public String name_;
 
     /**
      * Return type of the method.
      */
-    public String returnType_ = null;
+    public String returnType_;
 
     /**
      * The fully qualified name of the class or interface this method is
      * inherited from. If this is null, then the method is defined locally
      * in this class or interface.
      */
-    public String inheritedFrom_ = null;
+    public String inheritedFrom_;
 
     /**
      * The exceptions thrown by this method, being all the exception types
@@ -43,17 +42,17 @@ class MethodAPI implements Comparable<MethodAPI> {
     /**
      * Set if this method is abstract.
      */
-    public boolean isAbstract_ = false;
+    public boolean isAbstract_;
 
     /**
      * Set if this method is native.
      */
-    public boolean isNative_ = false;
+    public boolean isNative_;
 
     /**
      * Set if this method is synchronized.
      */
-    public boolean isSynchronized_ = false;
+    public boolean isSynchronized_;
 
     /**
      * Modifiers for this class.
@@ -65,7 +64,7 @@ class MethodAPI implements Comparable<MethodAPI> {
     /**
      * The doc block, default is null.
      */
-    public String doc_ = null;
+    public String doc_;
 
     /**
      * Constructor.
@@ -162,17 +161,15 @@ class MethodAPI implements Comparable<MethodAPI> {
     public String getSignature() {
         if (signature_ != null)
             return signature_;
-        String res = "";
+        StringBuilder res = new StringBuilder();
         boolean first = true;
-        Iterator<ParamAPI> iter = params_.iterator();
-        while (iter.hasNext()) {
+        for (ParamAPI paramAPI : params_) {
             if (!first)
-                res += ", ";
-            ParamAPI param = (iter.next());
-            res += param.toString();
+                res.append(", ");
+            res.append(paramAPI.toString());
             first = false;
         }
-        signature_ = res;
-        return res;
+        signature_ = res.toString();
+        return res.toString();
     }
 }

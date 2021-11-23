@@ -17,34 +17,34 @@ class MemberDiff {
     /**
      * The old member type. For methods, this is the return type.
      */
-    public String oldType_ = null;
+    public String oldType_;
     /**
      * The new member type. For methods, this is the return type.
      */
-    public String newType_ = null;
+    public String newType_;
 
     /**
      * The old signature. Null except for methods.
      */
-    public String oldSignature_ = null;
+    public String oldSignature_;
     /**
      * The new signature. Null except for methods.
      */
-    public String newSignature_ = null;
+    public String newSignature_;
 
     /**
      * The old list of exceptions. Null except for methods and constructors.
      */
-    public String oldExceptions_ = null;
+    public String oldExceptions_;
     /**
      * The new list of exceptions. Null except for methods and constructors.
      */
-    public String newExceptions_ = null;
+    public String newExceptions_;
 
     /**
      * A string describing the changes in documentation.
      */
-    public String documentationChange_ = null;
+    public String documentationChange_;
 
     /**
      * A string describing the changes in modifiers.
@@ -52,13 +52,13 @@ class MemberDiff {
      * its visibility.
      * Null if no change.
      */
-    public String modifiersChange_ = null;
+    public String modifiersChange_;
 
     /**
      * The class name where the new member is defined.
      * Null if no change in inheritance.
      */
-    public String inheritedFrom_ = null;
+    public String inheritedFrom_;
 
     /**
      * Default constructor.

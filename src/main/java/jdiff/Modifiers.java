@@ -50,8 +50,7 @@ class Modifiers implements Comparable<Modifiers> {
         if (isDeprecated != o.isDeprecated)
             return -1;
         if (visibility != null) {
-            int comp = visibility.compareTo(o.visibility);
-            return comp;
+            return visibility.compareTo(o.visibility);
         }
         return 0;
     }

@@ -12,12 +12,12 @@ class SingleComment implements Comparable<SingleComment> {
     /**
      * The identifier for this comment.
      */
-    public String id_ = null;
+    public String id_;
 
     /**
      * The text of this comment.
      */
-    public String text_ = null;
+    public String text_;
 
     /**
      * If false, then this comment is inactive.

@@ -261,8 +261,7 @@ public class JDiffAntTask {
      * ignored.
      */
     protected String getPackageList(ProjectInfo proj) throws BuildException {
-        String packageList = "";
-        java.lang.StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         Vector<DirSet> dirSets = proj.getDirsets();
         int numDirSets = dirSets.size();
         boolean addComma = false;
@@ -270,16 +269,16 @@ public class JDiffAntTask {
             DirSet dirSet = dirSets.elementAt(i);
             DirectoryScanner dirScanner = dirSet.getDirectoryScanner(project);
             String[] files = dirScanner.getIncludedDirectories();
-            for (int j = 0; j < files.length; j++) {
+            for (String file : files) {
                 if (!addComma) {
                     addComma = true;
                 } else {
                     sb.append(",");
                 }
-                sb.append(files[j]);
+                sb.append(file);
             }
         }
-        packageList = sb.toString();
+        String packageList = sb.toString();
         if (packageList.compareTo("") == 0) {
             throw new BuildException("Error: no packages found to scan");
         }
@@ -302,22 +301,18 @@ public class JDiffAntTask {
                         Project.MSG_WARN);
             }
 
-            InputStream in = new FileInputStream(src);
-            OutputStream out = new FileOutputStream(dst);
-
-            // Transfer bytes from in to out
-            byte[] buf = new byte[1024];
-            int len;
-            while ((len = in.read(buf)) > 0) {
-                out.write(buf, 0, len);
+            try (
+                InputStream in = new FileInputStream(src);
+                OutputStream out = new FileOutputStream(dst)
+            ) {
+                // Transfer bytes from in to out
+                byte[] buf = new byte[8 * 1024];
+                int len;
+                while ((len = in.read(buf)) > 0) {
+                    out.write(buf, 0, len);
+                }
             }
-            in.close();
-            out.close();
-        } catch (java.io.FileNotFoundException fnfe) {
-            project.log("Warning: unable to copy " + src +
-                    " to " + dst, Project.MSG_WARN);
-            // Discard the exception
-        } catch (java.io.IOException ioe) {
+        } catch (IOException fnfe) {
             project.log("Warning: unable to copy " + src +
                     " to " + dst, Project.MSG_WARN);
             // Discard the exception

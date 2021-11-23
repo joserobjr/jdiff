@@ -46,6 +46,7 @@ public class APIComparator {
     /**
      * Compare two APIs.
      */
+    @SuppressWarnings("StatementWithEmptyBody")
     public void compareAPIs(API oldAPI, API newAPI) {
         System.out.println("JDiff: comparing the old and new APIs ...");
         oldAPI_ = oldAPI;
@@ -97,9 +98,8 @@ public class APIComparator {
             int idx = Collections.binarySearch(oldAPI.packages_, newPkg);
             if (idx < 0) {
                 // See comments above
-                int existsOld = oldAPI.packages_.indexOf(newPkg);
-                if (existsOld != -1) {
-                    // Don't mark a package as added or compare it 
+                if (oldAPI.packages_.contains(newPkg)) {
+                    // Don't mark a package as added or compare it
                     // if it was already marked as changed
                 } else {
                     if (trace)
@@ -129,22 +129,22 @@ public class APIComparator {
 // XML was written out.
 // Note that this doesn't count changes in the modifiers of classes and 
 // packages. Other changes in members are counted.
-        Long denom = new Long(oldAPI.packages_.size() + newAPI.packages_.size());
+        long denom = oldAPI.packages_.size() + newAPI.packages_.size();
         // This should never be zero because an API always has packages?
-        if (denom.intValue() == 0) {
+        if (denom == 0L) {
             System.out.println("Error: no packages found in the APIs.");
             return;
         }
         if (trace)
-            System.out.println("Top level changes: " + differs + "/" + denom.intValue());
-        differs = (100.0 * differs) / denom.doubleValue();
+            System.out.println("Top level changes: " + differs + "/" + denom);
+        differs = (100.0 * differs) / (double) denom;
 
         // Some differences such as documentation changes are not tracked in 
         // the difference statistic, so a value of 0.0 does not mean that there
         // were no differences between the APIs.
         apiDiff.pdiff = differs;
-        Double percentage = new Double(differs);
-        int approxPercentage = percentage.intValue();
+        double percentage = differs;
+        int approxPercentage = (int) percentage;
         if (approxPercentage == 0)
             System.out.println(" Approximately " + percentage + "% difference between the APIs");
         else
@@ -156,6 +156,7 @@ public class APIComparator {
     /**
      * Compare two packages.
      */
+    @SuppressWarnings("StatementWithEmptyBody")
     public double comparePackages(PackageAPI oldPkg, PackageAPI newPkg) {
         if (trace)
             System.out.println("Comparing old package " + oldPkg.name_ +
@@ -203,8 +204,7 @@ public class APIComparator {
             int idx = Collections.binarySearch(oldPkg.classes_, newClass);
             if (idx < 0) {
                 // See comments above
-                int existsOld = oldPkg.classes_.indexOf(newClass);
-                if (existsOld != -1) {
+                if (oldPkg.classes_.contains(newClass)) {
                     // Don't mark a class as added or compare it 
                     // if it was already marked as changed
                 } else {
@@ -232,16 +232,17 @@ public class APIComparator {
         if (differs != 0.0 || differsFlag)
             apiDiff.packagesChanged.add(pkgDiff);
 
-        Long denom = new Long(oldPkg.classes_.size() + newPkg.classes_.size());
+        long denom = oldPkg.classes_.size() + newPkg.classes_.size();
         // This should never be zero because a package always has classes?
-        if (denom.intValue() == 0) {
+        if (denom == 0L) {
             System.out.println("Warning: no classes found in the package " + oldPkg.name_);
             return 0.0;
         }
         if (trace)
-            System.out.println("Package " + pkgDiff.name_ + " had a difference of " + differs + "/" + denom.intValue());
-        pkgDiff.pdiff = 100.0 * differs / denom.doubleValue();
-        return differs / denom.doubleValue();
+            System.out.println("Package " + pkgDiff.name_ + " had a difference of " + differs + "/" + denom);
+        double denomD = denom;
+        pkgDiff.pdiff = 100.0 * differs / denomD;
+        return differs / denomD;
     } // comparePackages()
 
     /**
@@ -254,7 +255,6 @@ public class APIComparator {
             System.out.println("  Comparing old class " + oldClass.name_ +
                     " and new class " + newClass.name_);
         boolean differsFlag = false;
-        double differs = 0.0;
         ClassDiff classDiff = new ClassDiff(oldClass.name_);
         classDiff.isInterface_ = newClass.isInterface_; // Used in the report
 
@@ -297,7 +297,7 @@ public class APIComparator {
         String modifiersChange = oldClass.modifiers_.diff(newClass.modifiers_);
         if (modifiersChange != null) {
             differsFlag = true;
-            if (modifiersChange.indexOf("Change from deprecated to undeprecated") != -1) {
+            if (modifiersChange.contains("Change from deprecated to undeprecated")) {
                 System.out.println("JDiff: warning: change from deprecated to undeprecated for class " + pkgDiff.name_ + "." + newClass.name_);
 
             }
@@ -325,21 +325,20 @@ public class APIComparator {
             pkgDiff.classesChanged.add(classDiff);
 
         // Get the numbers of affected elements from the classDiff object
-        differs =
+        double differs =
                 classDiff.ctorsRemoved.size() + classDiff.ctorsAdded.size() +
                         classDiff.ctorsChanged.size() +
                         classDiff.methodsRemoved.size() + classDiff.methodsAdded.size() +
                         classDiff.methodsChanged.size() +
                         classDiff.fieldsRemoved.size() + classDiff.fieldsAdded.size() +
                         classDiff.fieldsChanged.size();
-        Long denom = new Long(
-                oldClass.ctors_.size() +
-                        numLocalMethods(oldClass.methods_) +
-                        numLocalFields(oldClass.fields_) +
-                        newClass.ctors_.size() +
-                        numLocalMethods(newClass.methods_) +
-                        numLocalFields(newClass.fields_));
-        if (denom.intValue() == 0) {
+        long denom = oldClass.ctors_.size() +
+                numLocalMethods(oldClass.methods_) +
+                numLocalFields(oldClass.fields_) +
+                newClass.ctors_.size() +
+                numLocalMethods(newClass.methods_) +
+                numLocalFields(newClass.fields_);
+        if (denom == 0L) {
             // This is probably a placeholder interface, but documentation
             // or modifiers etc may have changed
             if (differsFlag) {
@@ -355,9 +354,10 @@ public class APIComparator {
             differs = 1.0;
         }
         if (trace)
-            System.out.println("  Class " + classDiff.name_ + " had a difference of " + differs + "/" + denom.intValue());
-        classDiff.pdiff = 100.0 * differs / denom.doubleValue();
-        return differs / denom.doubleValue();
+            System.out.println("  Class " + classDiff.name_ + " had a difference of " + differs + "/" + denom);
+        double denomD = denom;
+        classDiff.pdiff = 100.0 * differs / denomD;
+        return differs / denomD;
     } // compareClasses()
 
     /**
@@ -408,7 +408,7 @@ public class APIComparator {
                                 pkgDiff.name_, classDiff.name_, oldCtor.doc_, newCtor.doc_, id, title);
                     }
                     String modifiersChange = oldCtor.modifiers_.diff(newCtor.modifiers_);
-                    if (modifiersChange != null && modifiersChange.indexOf("Change from deprecated to undeprecated") != -1) {
+                    if (modifiersChange != null && modifiersChange.contains("Change from deprecated to undeprecated")) {
                         System.out.println("JDiff: warning: change from deprecated to undeprecated for a constructor in class" + newClass.name_);
                     }
                     memberDiff.addModifiersChange(modifiersChange);
@@ -456,6 +456,7 @@ public class APIComparator {
      * removed and added. To avoid this for the simple case, check for before
      * recording a method as removed or added.
      */
+    @SuppressWarnings("StatementWithEmptyBody")
     public boolean compareAllMethods(ClassAPI oldClass, ClassAPI newClass, ClassDiff classDiff) {
         if (trace)
             System.out.println("    Comparing methods: #old " +
@@ -659,7 +660,7 @@ public class APIComparator {
         String modifiersChange = oldMethod.modifiers_.diff(newMethod.modifiers_);
         if (modifiersChange != null) {
             differs = true;
-            if (modifiersChange.indexOf("Change from deprecated to undeprecated") != -1) {
+            if (modifiersChange.contains("Change from deprecated to undeprecated")) {
                 System.out.println("JDiff: warning: change from deprecated to undeprecated for method " + classDiff.name_ + "." + newMethod.name_);
 
             }
@@ -685,6 +686,7 @@ public class APIComparator {
     /**
      * Compare all the fields in two classes.
      */
+    @SuppressWarnings("StatementWithEmptyBody")
     public boolean compareAllFields(ClassAPI oldClass, ClassAPI newClass,
                                     ClassDiff classDiff) {
         if (trace)
@@ -772,13 +774,13 @@ public class APIComparator {
                         // Other differences
                         String modifiersChange = oldField.modifiers_.diff(newField.modifiers_);
                         memberDiff.addModifiersChange(modifiersChange);
-                        if (modifiersChange != null && modifiersChange.indexOf("Change from deprecated to undeprecated") != -1) {
+                        if (modifiersChange != null && modifiersChange.contains("Change from deprecated to undeprecated")) {
                             System.out.println("JDiff: warning: change from deprecated to undeprecated for class " + newClass.name_ + ", field " + newField.name_);
                         }
                         if (trace)
                             System.out.println("    Field " + newField.name_ + " was changed");
                         classDiff.fieldsChanged.add(memberDiff);
-                        differs = true;
+                        differs = true; //FIXME This unconditional modification to differs overrides the modifications above, there is something wrong.
                     }
                 } else if (oldField.inheritedFrom_ == null) {
                     if (trace)
@@ -799,8 +801,7 @@ public class APIComparator {
             int idx = Collections.binarySearch(oldClass.fields_, newField);
             if (idx < 0) {
                 // See comments above
-                int existsOld = oldClass.fields_.indexOf(newField);
-                if (existsOld != -1) {
+                if (oldClass.fields_.contains(newField)) {
                     // Don't mark a field as added if it was marked as changed
                 } else {
                     if (trace)
@@ -827,7 +828,7 @@ public class APIComparator {
             return true;
         if (oldDoc != null && newDoc == null)
             return true;
-        return oldDoc != null && newDoc != null && oldDoc.compareTo(newDoc) != 0;
+        return oldDoc != null && oldDoc.compareTo(newDoc) != 0;
     }
 
     /**
@@ -842,9 +843,9 @@ public class APIComparator {
     public static int changedInheritance(String oldInherit, String newInherit) {
         if (oldInherit == null && newInherit == null)
             return 0;
-        if (oldInherit == null && newInherit != null)
+        if (oldInherit == null)
             return 1;
-        if (oldInherit != null && newInherit == null)
+        if (newInherit == null)
             return 2;
         if (oldInherit.compareTo(newInherit) == 0)
             return 0;
@@ -913,9 +914,7 @@ public class APIComparator {
      */
     public int numLocalMethods(List<MethodAPI> methods) {
         int res = 0;
-        Iterator<MethodAPI> iter = methods.iterator();
-        while (iter.hasNext()) {
-            MethodAPI m = (iter.next());
+        for (MethodAPI m : methods) {
             if (m.inheritedFrom_ == null)
                 res++;
         }
@@ -927,9 +926,7 @@ public class APIComparator {
      */
     public int numLocalFields(List<FieldAPI> fields) {
         int res = 0;
-        Iterator<FieldAPI> iter = fields.iterator();
-        while (iter.hasNext()) {
-            FieldAPI f = (iter.next());
+        for (FieldAPI f : fields) {
             if (f.inheritedFrom_ == null)
                 res++;
         }

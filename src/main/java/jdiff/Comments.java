@@ -22,12 +22,12 @@ public class Comments {
     /**
      * All the possible comments known about, accessible by the commentID.
      */
-    public static Hashtable<String, String> allPossibleComments = new Hashtable<String, String>();
+    public static Hashtable<String, String> allPossibleComments = new Hashtable<>();
 
     /**
      * The old Comments object which is populated from the file read in.
      */
-    private static Comments oldComments_ = null;
+    private static Comments oldComments_;
 
     /**
      * Default constructor.
@@ -37,7 +37,7 @@ public class Comments {
     }
 
     // The list of comments elements associated with this objects
-    public List<SingleComment> commentsList_ = null; // SingleComment[]
+    public List<SingleComment> commentsList_; // SingleComment[]
 
     /**
      * Read the file where the XML for comments about the changes between
@@ -83,7 +83,9 @@ public class Comments {
             }
             parser.setContentHandler(handler);
             parser.setErrorHandler(handler);
-            parser.parse(new InputSource(new FileInputStream(new File(filename))));
+            try (FileInputStream fis = new FileInputStream(filename)) {
+                parser.parse(new InputSource(new BufferedInputStream(fis)));
+            }
         } catch (org.xml.sax.SAXNotRecognizedException snre) {
             System.out.println("SAX Parser does not recognize feature: " + snre);
             snre.printStackTrace();
@@ -115,18 +117,18 @@ public class Comments {
         int idx2 = xsdFileName.lastIndexOf('/');
         if (idx == -1 && idx2 == -1) {
             xsdFileName = "";
-        } else if (idx == -1 && idx2 != -1) {
+        } else if (idx == -1) {
             xsdFileName = xsdFileName.substring(0, idx2 + 1);
-        } else if (idx != -1 && idx2 == -1) {
+        } else if (idx2 == -1) {
             xsdFileName = xsdFileName.substring(0, idx + 1);
-        } else if (idx != -1 && idx2 != -1) {
-            int max = idx2 > idx ? idx2 : idx;
+        } else {
+            int max = Math.max(idx2, idx);
             xsdFileName = xsdFileName.substring(0, max + 1);
         }
         xsdFileName += "comments.xsd";
-        try {
-            FileOutputStream fos = new FileOutputStream(xsdFileName);
-            PrintWriter xsdFile = new PrintWriter(fos);
+        try (FileOutputStream fos = new FileOutputStream(xsdFileName);
+             PrintWriter xsdFile = new PrintWriter(fos)
+        ) {
             // The contents of the comments.xsd file
             xsdFile.println("<?xml version=\"1.0\" encoding=\"iso-8859-1\" standalone=\"no\"?>");
             xsdFile.println("<xsd:schema xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">");
@@ -159,7 +161,6 @@ public class Comments {
             xsdFile.println("</xsd:complexType>");
             xsdFile.println();
             xsdFile.println("</xsd:schema>");
-            xsdFile.close();
         } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + xsdFileName);
             System.out.println("Error: " + e.getMessage());
@@ -222,7 +223,7 @@ public class Comments {
         if (text == null)
             return null;
 
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
 
         int state = -1;
 
@@ -234,9 +235,9 @@ public class Comments {
         final int IN_LINK_LINKTEXT = 4;
         final int END_OF_LINK = 5;
 
-        StringBuffer identifier = null;
-        StringBuffer identifierReference = null;
-        StringBuffer linkText = null;
+        StringBuilder identifier = null;
+        StringBuilder identifierReference = null;
+        StringBuilder linkText = null;
 
         // Figure out relative reference if required.
         String ref = "";
@@ -278,7 +279,7 @@ public class Comments {
                     break;
                 case IN_LINK_IDENTIFIER:
                     if (identifier == null) {
-                        identifier = new StringBuffer();
+                        identifier = new StringBuilder();
                     }
 
                     if (c == '#') {
@@ -300,7 +301,7 @@ public class Comments {
                     break;
                 case IN_LINK_IDENTIFIER_REFERENCE:
                     if (identifierReference == null) {
-                        identifierReference = new StringBuffer();
+                        identifierReference = new StringBuilder();
                     }
                     if (Character.isWhitespace(c)) {
                         state = IN_LINK_LINKTEXT;
@@ -327,7 +328,7 @@ public class Comments {
                     }
                     break;
                 case IN_LINK_LINKTEXT:
-                    if (linkText == null) linkText = new StringBuffer();
+                    if (linkText == null) linkText = new StringBuilder();
 
                     linkText.append(c);
 
@@ -376,19 +377,18 @@ public class Comments {
      * Write the XML representation of comments to a file.
      *
      * @param outputFileName The name of the comments file.
-     * @param oldComments    The old comments on the changed APIs.
      * @param newComments    The new comments on the changed APIs.
      * @return true if no problems encountered
      */
     public static boolean writeFile(String outputFileName,
                                     Comments newComments) {
-        try {
-            FileOutputStream fos = new FileOutputStream(outputFileName);
-            outputFile = new PrintWriter(fos);
+        try (FileOutputStream fos = new FileOutputStream(outputFileName);
+             PrintWriter writer = new PrintWriter(fos)
+        ) {
+            outputFile = writer;
             newComments.emitXMLHeader(outputFileName);
             newComments.emitComments();
             newComments.emitXMLFooter();
-            outputFile.close();
         } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + outputFileName);
             System.out.println("Error: " + e.getMessage());
@@ -401,9 +401,7 @@ public class Comments {
      * Write the Comments object out in XML.
      */
     public void emitComments() {
-        Iterator<SingleComment> iter = commentsList_.iterator();
-        while (iter.hasNext()) {
-            SingleComment currComment = (iter.next());
+        for (SingleComment currComment : commentsList_) {
             if (!currComment.isUsed_)
                 outputFile.println("<!-- This comment is no longer used ");
             outputFile.println("<comment>");
@@ -444,9 +442,7 @@ public class Comments {
 
         // See which comment ids are no longer used and add those entries to 
         // the new comments, marking them as unused.
-        Iterator<SingleComment> iter = oldComments.commentsList_.iterator();
-        while (iter.hasNext()) {
-            SingleComment oldComment = (iter.next());
+        for (SingleComment oldComment : oldComments.commentsList_) {
             int idx = Collections.binarySearch(newComments.commentsList_, oldComment);
             if (idx < 0) {
                 System.out.println("Warning: comment \"" + oldComment.id_ + "\" is no longer used.");
@@ -495,9 +491,6 @@ public class Comments {
         outputFile.println();
         outputFile.println("</comments>");
     }
-
-    private static final List oldAPIList = null;
-    private static final List newAPIList = null;
 
     /**
      * Return true if the given HTML tag has no separate </tag> end element.

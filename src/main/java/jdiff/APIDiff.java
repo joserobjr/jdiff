@@ -13,19 +13,19 @@ import java.util.*;
 public class APIDiff {
 
     /** Packages added in the new API. */
-    public List<PackageAPI> packagesAdded = null; // PackageAPI[]
+    public List<PackageAPI> packagesAdded; // PackageAPI[]
     /** Packages removed in the new API. */
-    public List<PackageAPI> packagesRemoved = null; // PackageAPI[]
+    public List<PackageAPI> packagesRemoved; // PackageAPI[]
     /** Packages changed in the new API. */
-    public List<PackageDiff> packagesChanged = null; // PackageDiff[]
+    public List<PackageDiff> packagesChanged; // PackageDiff[]
 
     /** Name of the old API. */
-    public static String oldAPIName_;
+    public static String oldAPIName_; //FIXME Why is this static?
     /** Name of the old API. */
-    public static String newAPIName_;
+    public static String newAPIName_; //FIXME Why is this static?
 
     /* The overall percentage difference between the two APIs. */
-    public double pdiff = 0.0;
+    public double pdiff;
 
     /** Default constructor. */
     public APIDiff() {

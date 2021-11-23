@@ -5,7 +5,6 @@ import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -28,34 +27,34 @@ class CommentsHandler extends DefaultHandler {
     /**
      * The Comments object which is populated from the XML file.
      */
-    public Comments comments_ = null;
+    public Comments comments_;
 
     /**
      * The current SingleComment object being populated.
      */
-    private List<SingleComment> currSingleComment_ = null; // SingleComment[]
+    private List<SingleComment> currSingleComment_; // SingleComment[]
 
     /**
      * Set if in text.
      */
-    private boolean inText = false;
+    private boolean inText;
 
     /**
      * The current text which is being assembled from chunks.
      */
-    private String currentText = null;
+    private String currentText;
 
     /**
      * The stack of SingleComments still waiting for comment text.
      */
-    private LinkedList<String> tagStack = null;
+    private LinkedList<String> tagStack;
 
     /**
      * Default constructor.
      */
     public CommentsHandler(Comments comments) {
         comments_ = comments;
-        tagStack = new LinkedList<String>();
+        tagStack = new LinkedList<>();
     }
 
     public void startDocument() {
@@ -73,7 +72,7 @@ class CommentsHandler extends DefaultHandler {
             localName = qName;
         if (localName.compareTo("comments") == 0) {
             String commentsName = attributes.getValue("name");
-            String version = attributes.getValue("jdversion"); // Not used yet
+            //String version = attributes.getValue("jdversion"); // Not used yet
             if (commentsName == null) {
                 System.out.println("Error: no identifier found in the comments XML file.");
                 System.exit(3);
@@ -149,9 +148,7 @@ class CommentsHandler extends DefaultHandler {
             System.out.println("Warning: text of comment does not end in a period: " + currentText);
         }
         // Add this comment to all the SingleComments waiting for it
-        Iterator<SingleComment> iter = currSingleComment_.iterator();
-        while (iter.hasNext()) {
-            SingleComment currComment = (iter.next());
+        for (SingleComment currComment : currSingleComment_) {
             if (currComment.text_ == null)
                 currComment.text_ = currentText;
             else
@@ -165,27 +162,26 @@ class CommentsHandler extends DefaultHandler {
      */
     public void addStartTagToText(String localName, Attributes attributes) {
         // Need to insert the HTML tag into the current text
-        String currentHTMLTag = localName;
         // Save the tag in a stack
-        tagStack.add(currentHTMLTag);
-        String tag = "<" + currentHTMLTag;
+        tagStack.add(localName);
+        StringBuilder tag = new StringBuilder("<").append(localName);
         // Now add all the attributes into the current text
         int len = attributes.getLength();
         for (int i = 0; i < len; i++) {
             String name = attributes.getLocalName(i);
             String value = attributes.getValue(i);
-            tag += " " + name + "=\"" + value + "\"";
+            tag.append(" ").append(name).append("=\"").append(value).append("\"");
         }
 
         // End the tag
-        if (Comments.isMinimizedTag(currentHTMLTag)) {
-            tag += "/>";
+        if (Comments.isMinimizedTag(localName)) {
+            tag.append("/>");
         } else {
-            tag += ">";
+            tag.append(">");
         }
         // Now insert the HTML tag into the current text
         if (currentText == null)
-            currentText = tag;
+            currentText = tag.toString();
         else
             currentText += tag;
     }
@@ -193,7 +189,7 @@ class CommentsHandler extends DefaultHandler {
     /**
      * Add the end tag to the current comment text.
      */
-    public void addEndTagToText(String localName) {
+    public void addEndTagToText(@SuppressWarnings("unused") String localName) {
         // Close the current HTML tag
         String currentHTMLTag = (tagStack.removeLast());
         if (!Comments.isMinimizedTag(currentHTMLTag))

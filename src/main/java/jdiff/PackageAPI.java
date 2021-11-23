@@ -29,7 +29,7 @@ class PackageAPI implements Comparable<PackageAPI> {
     /**
      * The doc block, default is null.
      */
-    public String doc_ = null;
+    public String doc_;
 
     /**
      * Constructor.

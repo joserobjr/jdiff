@@ -5,9 +5,8 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 
-import java.io.File;
+import java.io.BufferedInputStream;
 import java.io.FileInputStream;
-import java.util.Iterator;
 
 /**
  * Creates an API object from an XML file. The API object is the internal
@@ -23,7 +22,7 @@ public class XMLToAPI {
     /**
      * The instance of the API object which is populated from the file.
      */
-    private static API api_ = null;
+    private static API api_;
 
     /**
      * Default constructor.
@@ -71,7 +70,9 @@ public class XMLToAPI {
 
             parser.setContentHandler(handler);
             parser.setErrorHandler(handler);
-            parser.parse(new InputSource(new FileInputStream(new File(filename))));
+            try (FileInputStream fis = new FileInputStream(filename)) {
+                parser.parse(new InputSource(new BufferedInputStream(fis)));
+            }
         } catch (org.xml.sax.SAXNotRecognizedException snre) {
             System.out.println("SAX Parser does not recognize feature: " + snre);
             snre.printStackTrace();
@@ -99,12 +100,8 @@ public class XMLToAPI {
      * Add the inherited methods and fields to each class in turn.
      */
     public static void addInheritedElements() {
-        Iterator<PackageAPI> iter = api_.packages_.iterator();
-        while (iter.hasNext()) {
-            PackageAPI pkg = (iter.next());
-            Iterator<ClassAPI> iter2 = pkg.classes_.iterator();
-            while (iter2.hasNext()) {
-                ClassAPI cls = (iter2.next());
+        for (PackageAPI pkg : api_.packages_) {
+            for (ClassAPI cls : pkg.classes_) {
                 // Look up any inherited classes or interfaces
                 if (cls.extends_ != null) {
                     ClassAPI parent = api_.classes_.get(cls.extends_);
@@ -112,9 +109,7 @@ public class XMLToAPI {
                         addInheritedElements(cls, parent, cls.extends_);
                 }
                 if (cls.implements_.size() != 0) {
-                    Iterator<String> iter3 = cls.implements_.iterator();
-                    while (iter3.hasNext()) {
-                        String implName = (iter3.next());
+                    for (String implName : cls.implements_) {
                         ClassAPI parent = api_.classes_.get(implName);
                         if (parent != null)
                             addInheritedElements(cls, parent, implName);
@@ -139,14 +134,10 @@ public class XMLToAPI {
     public static void addInheritedElements(ClassAPI child, ClassAPI parent,
                                             String fqParentName) {
         if (parent.methods_.size() != 0) {
-            Iterator<MethodAPI> iter = parent.methods_.iterator();
-            while (iter.hasNext()) {
-                MethodAPI m = (iter.next());
+            for (MethodAPI m : parent.methods_) {
                 // See if it the method is overridden locally
                 boolean overridden = false;
-                Iterator<MethodAPI> iter2 = child.methods_.iterator();
-                while (iter2.hasNext()) {
-                    MethodAPI localM = (iter2.next());
+                for (MethodAPI localM : child.methods_) {
                     if (localM.name_.compareTo(m.name_) == 0 &&
                             localM.getSignature().compareTo(m.getSignature()) == 0)
                         overridden = true;
@@ -161,10 +152,8 @@ public class XMLToAPI {
             }
         }
         if (parent.fields_.size() != 0) {
-            Iterator<FieldAPI> iter = parent.fields_.iterator();
-            while (iter.hasNext()) {
-                FieldAPI f = (iter.next());
-                if (child.fields_.indexOf(f) == -1 &&
+            for (FieldAPI f : parent.fields_) {
+                if (!child.fields_.contains(f) &&
                         f.inheritedFrom_ == null &&
                         f.modifiers_.visibility != null &&
                         f.modifiers_.visibility.compareTo("private") != 0) {
@@ -182,9 +171,7 @@ public class XMLToAPI {
                 addInheritedElements(child, parent2, parent.extends_);
         }
         if (parent.implements_.size() != 0) {
-            Iterator<String> iter3 = parent.implements_.iterator();
-            while (iter3.hasNext()) {
-                String implName = (iter3.next());
+            for (String implName : parent.implements_) {
                 ClassAPI parent2 = api_.classes_.get(implName);
                 if (parent2 != null)
                     addInheritedElements(child, parent2, implName);
@@ -275,7 +262,6 @@ public class XMLToAPI {
     /**
      * Add a constructor to the current class. Called by the XML parser.
      *
-     * @param name      The name of the constructor.
      * @param type      The type of the constructor.
      * @param modifiers Modifiers for this constructor.
      */
@@ -368,7 +354,7 @@ public class XMLToAPI {
      * not set for reasons of efficiency, and also because if JDiff generated
      * the XML, it should not need validating.
      */
-    public static boolean validateXML = false;
+    public static boolean validateXML;
 
     /**
      * If set, then store and display the whole qualified name of exceptions.

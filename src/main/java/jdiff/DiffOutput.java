@@ -12,27 +12,27 @@ class DiffOutput implements Comparable<DiffOutput> {
     /**
      * The package name for this difference.
      */
-    public String pkgName_ = null;
+    public String pkgName_;
 
     /**
      * The class name for this difference, may be null.
      */
-    public String className_ = null;
+    public String className_;
 
     /**
      * The HTML named anchor identifier for this difference.
      */
-    public String id_ = null;
+    public String id_;
 
     /**
      * The title for this difference.
      */
-    public String title_ = null;
+    public String title_;
 
     /**
      * The text for this difference, with deleted and added words marked.
      */
-    public String text_ = null;
+    public String text_;
 
     /**
      * Constructor.
