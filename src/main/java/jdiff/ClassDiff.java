@@ -1,83 +1,110 @@
 package jdiff;
 
-import java.util.*;
-import com.sun.javadoc.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * The changes between two classes.
- *
+ * <p>
  * See the file LICENSE.txt for copyright details.
+ *
  * @author Matthew Doar, mdoar@pobox.com
  */
 class ClassDiff {
 
-    /** Name of the class. */
+    /**
+     * Name of the class.
+     */
     public String name_;
 
-    /** Set if this class is an interface in the new API. */
+    /**
+     * Set if this class is an interface in the new API.
+     */
     public boolean isInterface_;
 
-    /** 
-     * A string describing the changes in inheritance. 
+    /**
+     * A string describing the changes in inheritance.
      */
     public String inheritanceChange_ = null;
 
-    /** 
-     * A string describing the changes in documentation. 
+    /**
+     * A string describing the changes in documentation.
      */
     public String documentationChange_ = null;
 
-    /** 
-     * A string describing the changes in modifiers. 
+    /**
+     * A string describing the changes in modifiers.
      * Changes can be in whether this is a class or interface, whether it is
      * abstract, static, final, and in its visibility.
      */
     public String modifiersChange_ = null;
 
-    /** Constructors added in the new API. */
-    public List ctorsAdded = null;
-    /** Constructors removed in the new API. */
-    public List ctorsRemoved = null;
-    /** Constructors changed in the new API. */
-    public List ctorsChanged = null;
+    /**
+     * Constructors added in the new API.
+     */
+    public List<ConstructorAPI> ctorsAdded = null;
+    /**
+     * Constructors removed in the new API.
+     */
+    public List<ConstructorAPI> ctorsRemoved = null;
+    /**
+     * Constructors changed in the new API.
+     */
+    public List<MemberDiff> ctorsChanged = null;
 
-    /** Methods added in the new API. */
-    public List methodsAdded = null;
-    /** Methods removed in the new API. */
-    public List methodsRemoved = null;
-    /** Methods changed in the new API. */
-    public List methodsChanged = null;
+    /**
+     * Methods added in the new API.
+     */
+    public List<MethodAPI> methodsAdded = null;
+    /**
+     * Methods removed in the new API.
+     */
+    public List<MethodAPI> methodsRemoved = null;
+    /**
+     * Methods changed in the new API.
+     */
+    public List<MemberDiff> methodsChanged = null;
 
-    /** Fields added in the new API. */
-    public List fieldsAdded = null;
-    /** Fields removed in the new API. */
-    public List fieldsRemoved = null;
-    /** Fields changed in the new API. */
-    public List fieldsChanged = null;
+    /**
+     * Fields added in the new API.
+     */
+    public List<FieldAPI> fieldsAdded = null;
+    /**
+     * Fields removed in the new API.
+     */
+    public List<FieldAPI> fieldsRemoved = null;
+    /**
+     * Fields changed in the new API.
+     */
+    public List<MemberDiff> fieldsChanged = null;
 
     /* The percentage difference for this class. */
     public double pdiff = 0.0;
 
-    /** Default constructor. */
+    /**
+     * Default constructor.
+     */
     public ClassDiff(String name) {
         name_ = name;
         isInterface_ = false;
 
-        ctorsAdded = new ArrayList(); // ConstructorAPI[]
-        ctorsRemoved = new ArrayList(); // ConstructorAPI[]
-        ctorsChanged = new ArrayList(); // MemberDiff[]
+        ctorsAdded = new ArrayList<>(); // ConstructorAPI[]
+        ctorsRemoved = new ArrayList<ConstructorAPI>(); // ConstructorAPI[]
+        ctorsChanged = new ArrayList<MemberDiff>(); // MemberDiff[]
 
-        methodsAdded = new ArrayList(); // MethodAPI[]
-        methodsRemoved = new ArrayList(); // MethodAPI[]
-        methodsChanged = new ArrayList(); // MemberDiff[]
+        methodsAdded = new ArrayList<MethodAPI>(); // MethodAPI[]
+        methodsRemoved = new ArrayList<MethodAPI>(); // MethodAPI[]
+        methodsChanged = new ArrayList<>(); // MemberDiff[]
 
-        fieldsAdded = new ArrayList(); // FieldAPI[]
-        fieldsRemoved = new ArrayList(); // FieldAPI[]
-        fieldsChanged = new ArrayList(); // MemberDiff[]
-    }   
+        fieldsAdded = new ArrayList<FieldAPI>(); // FieldAPI[]
+        fieldsRemoved = new ArrayList<FieldAPI>(); // FieldAPI[]
+        fieldsChanged = new ArrayList<MemberDiff>(); // MemberDiff[]
+    }
 
-    /** 
-     * Compare the inheritance details of two classes and produce 
+    /**
+     * Compare the inheritance details of two classes and produce
      * a String for the inheritanceChanges_ field in this class.
      * If there is no difference, null is returned.
      */
@@ -87,16 +114,16 @@ class ClassDiff {
         String res = "";
         boolean hasContent = false;
         if (oldClass.extends_ != null && newClass.extends_ != null &&
-            oldClass.extends_.compareTo(newClass.extends_) != 0) {
+                oldClass.extends_.compareTo(newClass.extends_) != 0) {
             res += "The superclass changed from <code>" + oldClass.extends_ + "</code> to <code>" + newClass.extends_ + "</code>.<br>";
             hasContent = true;
         }
         // Check for implemented interfaces which were removed
         String removedInterfaces = "";
         int numRemoved = 0;
-        Iterator iter = oldClass.implements_.iterator();
+        Iterator<String> iter = oldClass.implements_.iterator();
         while (iter.hasNext()) {
-            String oldInterface = (String)(iter.next());
+            String oldInterface = (iter.next());
             int idx = Collections.binarySearch(newClass.implements_, oldInterface);
             if (idx < 0) {
                 if (numRemoved != 0)
@@ -109,7 +136,7 @@ class ClassDiff {
         int numAdded = 0;
         iter = newClass.implements_.iterator();
         while (iter.hasNext()) {
-            String newInterface = (String)(iter.next());
+            String newInterface = (iter.next());
             int idx = Collections.binarySearch(oldClass.implements_, newInterface);
             if (idx < 0) {
                 if (numAdded != 0)
@@ -141,7 +168,9 @@ class ClassDiff {
         return res;
     }
 
-    /** Add a change in the modifiers. */
+    /**
+     * Add a change in the modifiers.
+     */
     public void addModifiersChange(String commonModifierChanges) {
         if (commonModifierChanges != null) {
             if (modifiersChange_ == null)

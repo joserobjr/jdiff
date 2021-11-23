@@ -1,34 +1,42 @@
 package jdiff;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.*;
-import java.io.*;
 
 /**
  * Emit HTML based on the changes between two sets of APIs.
- *
+ * <p>
  * See the file LICENSE.txt for copyright details.
+ *
  * @author Matthew Doar, mdoar@pobox.com
  */
 public class HTMLReportGenerator {
 
-    /** Default constructor. */
+    /**
+     * Default constructor.
+     */
     public HTMLReportGenerator() {
-    }   
+    }
 
-    /** The Comments object for existing comments. */
+    /**
+     * The Comments object for existing comments.
+     */
     private Comments existingComments_ = null;
 
-    /** 
-     * The Comments object for freshly regenerated comments. 
+    /**
+     * The Comments object for freshly regenerated comments.
      * This is populated during the generation of the report,
      * and should be like existingComments_ but with unused comments
-     * marked as such, so that they can be commented out in XML when 
+     * marked as such, so that they can be commented out in XML when
      * the new comments are written out to the comments file.
      */
     private Comments newComments_ = null;
 
-    /** 
-     * Accessor method for the freshly generated Comments object. 
+    /**
+     * Accessor method for the freshly generated Comments object.
      * The list of comments is sorted before the object is returned.
      */
     public Comments getNewComments() {
@@ -36,7 +44,9 @@ public class HTMLReportGenerator {
         return newComments_;
     }
 
-    /** Generate the report. */
+    /**
+     * Generate the report.
+     */
     public void generate(APIComparator comp, Comments existingComments) {
         String fullReportFileName = reportFileName;
         if (outputDir != null)
@@ -62,7 +72,7 @@ public class HTMLReportGenerator {
         // This is the top-level summary file, first in the right hand frame
         // or linked at the start to if no frames are used.
         String changesSummaryName = fullReportFileName + JDiff.DIR_SEP +
-            reportFileName + "-summary" + reportFileExt;
+                reportFileName + "-summary" + reportFileExt;
         apiDiff = comp.apiDiff;
         try {
             FileOutputStream fos = new FileOutputStream(changesSummaryName);
@@ -70,12 +80,12 @@ public class HTMLReportGenerator {
             writeStartHTMLHeader();
             // Write out the title in he HTML header
             String oldAPIName = "Old API";
-            if (apiDiff.oldAPIName_ != null)
-                oldAPIName = apiDiff.oldAPIName_;
+            if (APIDiff.oldAPIName_ != null)
+                oldAPIName = APIDiff.oldAPIName_;
             String newAPIName = "New API";
-            if (apiDiff.newAPIName_ != null)
-                newAPIName = apiDiff.newAPIName_;
-            if (windowTitle == null) 
+            if (APIDiff.newAPIName_ != null)
+                newAPIName = APIDiff.newAPIName_;
+            if (windowTitle == null)
                 writeHTMLTitle("API Differences between " + oldAPIName + " and " + newAPIName);
             else
                 writeHTMLTitle(windowTitle);
@@ -84,18 +94,18 @@ public class HTMLReportGenerator {
             writeText("<BODY>");
 
             // Add the nav bar for the summary page
-            writeNavigationBar(reportFileName + "-summary", null, null, 
-                               null, 0, true,
-                               apiDiff.packagesRemoved.size() != 0, 
-                               apiDiff.packagesAdded.size() != 0,
-                               apiDiff.packagesChanged.size() != 0);
-            
+            writeNavigationBar(reportFileName + "-summary", null, null,
+                    null, 0, true,
+                    apiDiff.packagesRemoved.size() != 0,
+                    apiDiff.packagesAdded.size() != 0,
+                    apiDiff.packagesChanged.size() != 0);
+
             // Write the title in the body with some formatting
             if (docTitle == null) {
-                writeText("<center>");        
+                writeText("<center>");
                 writeText("<H1>API Differences</H1>");
-                writeText("</center>");        
-                writeText("<center>");        
+                writeText("</center>");
+                writeText("<center>");
                 writeText("<H2>Between " + oldAPIName + " and " + newAPIName + "</H2>");
                 writeText("</center>");
             } else {
@@ -106,7 +116,7 @@ public class HTMLReportGenerator {
             writeReport(apiDiff);
             writeHTMLFooter();
             reportFile.close();
-        } catch(IOException e) {
+        } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + changesSummaryName);
             System.out.println("Error: " + e.getMessage());
             System.exit(1);
@@ -117,23 +127,23 @@ public class HTMLReportGenerator {
         // The top-level changes.html frames file where everything starts.
         String tln = fullReportFileName + reportFileExt;
         // The file for the top-left frame.
-        String tlf = fullReportFileName + JDiff.DIR_SEP + 
-            "jdiff_topleftframe" + reportFileExt;
+        String tlf = fullReportFileName + JDiff.DIR_SEP +
+                "jdiff_topleftframe" + reportFileExt;
         // The default file for the bottom-left frame is the one with the
         // most information in it.
-        String allDiffsIndexName = fullReportFileName + JDiff.DIR_SEP + 
-            "alldiffs_index"; 
+        String allDiffsIndexName = fullReportFileName + JDiff.DIR_SEP +
+                "alldiffs_index";
         // Other indexes for the bottom-left frame.
-        String packagesIndexName = fullReportFileName + JDiff.DIR_SEP + 
-            "packages_index"; 
-        String classesIndexName = fullReportFileName + JDiff.DIR_SEP + 
-            "classes_index"; 
-        String constructorsIndexName = fullReportFileName + JDiff.DIR_SEP + 
-            "constructors_index"; 
-        String methodsIndexName = fullReportFileName + JDiff.DIR_SEP + 
-            "methods_index"; 
-        String fieldsIndexName = fullReportFileName + JDiff.DIR_SEP + 
-            "fields_index"; 
+        String packagesIndexName = fullReportFileName + JDiff.DIR_SEP +
+                "packages_index";
+        String classesIndexName = fullReportFileName + JDiff.DIR_SEP +
+                "classes_index";
+        String constructorsIndexName = fullReportFileName + JDiff.DIR_SEP +
+                "constructors_index";
+        String methodsIndexName = fullReportFileName + JDiff.DIR_SEP +
+                "methods_index";
+        String fieldsIndexName = fullReportFileName + JDiff.DIR_SEP +
+                "fields_index";
 
         HTMLFiles hf = new HTMLFiles(this);
         hf.emitTopLevelFile(tln, apiDiff);
@@ -142,52 +152,52 @@ public class HTMLReportGenerator {
         hf.emitStylesheet();
 
         HTMLIndexes h = new HTMLIndexes(this);
-        h.emitAllBottomLeftFiles(packagesIndexName, classesIndexName, 
-                            constructorsIndexName, methodsIndexName,
-                            fieldsIndexName, allDiffsIndexName, apiDiff);
+        h.emitAllBottomLeftFiles(packagesIndexName, classesIndexName,
+                constructorsIndexName, methodsIndexName,
+                fieldsIndexName, allDiffsIndexName, apiDiff);
 
         if (doStats) {
             // The file for the statistical report.
-            String sf = fullReportFileName + JDiff.DIR_SEP + 
-                "jdiff_statistics" + reportFileExt;
+            String sf = fullReportFileName + JDiff.DIR_SEP +
+                    "jdiff_statistics" + reportFileExt;
             HTMLStatistics stats = new HTMLStatistics(this);
             stats.emitStatistics(sf, apiDiff);
         }
-    }   
+    }
 
-    /** 
-     * Write the HTML report. 
-     *
-     * The top section describes all the packages added (with links) and 
-     * removed, and the changed packages section has links which takes you 
+    /**
+     * Write the HTML report.
+     * <p>
+     * The top section describes all the packages added (with links) and
+     * removed, and the changed packages section has links which takes you
      * to a section for each package. This pattern continues for classes and
      * constructors, methods and fields.
      */
     public void writeReport(APIDiff apiDiff) {
-      
-	if (incompatibleChangesOnly) {
-	  removeIncompatibleChanges(apiDiff);
-	}
+
+        if (incompatibleChangesOnly) {
+            removeIncompatibleChanges(apiDiff);
+        }
 
         // Report packages which were removed in the new API
         if (apiDiff.packagesRemoved.size() != 0) {
             writeTableStart("Removed Packages", 2);
-            Iterator iter = apiDiff.packagesRemoved.iterator();
+            Iterator<PackageAPI> iter = apiDiff.packagesRemoved.iterator();
             while (iter.hasNext()) {
-                PackageAPI pkgAPI = (PackageAPI)(iter.next());
+                PackageAPI pkgAPI = (iter.next());
                 String pkgName = pkgAPI.name_;
                 if (trace) System.out.println("Package " + pkgName + " was removed.");
                 writePackageTableEntry(pkgName, 0, pkgAPI.doc_, false);
             }
             writeTableEnd();
         }
-        
+
         // Report packages which were added in the new API
         if (!incompatibleChangesOnly && apiDiff.packagesAdded.size() != 0) {
             writeTableStart("Added Packages", 2);
-            Iterator iter = apiDiff.packagesAdded.iterator();
+            Iterator<PackageAPI> iter = apiDiff.packagesAdded.iterator();
             while (iter.hasNext()) {
-                PackageAPI pkgAPI = (PackageAPI)(iter.next());
+                PackageAPI pkgAPI = (iter.next());
                 String pkgName = pkgAPI.name_;
                 if (trace) System.out.println("Package " + pkgName + " was added.");
                 writePackageTableEntry(pkgName, 1, pkgAPI.doc_, false);
@@ -200,9 +210,9 @@ public class HTMLReportGenerator {
             // Emit a table of changed packages, with links to the file
             // for each package.
             writeTableStart("Changed Packages", 3);
-            Iterator iter = apiDiff.packagesChanged.iterator();
+            Iterator<PackageDiff> iter = apiDiff.packagesChanged.iterator();
             while (iter.hasNext()) {
-                PackageDiff pkgDiff = (PackageDiff)(iter.next());
+                PackageDiff pkgDiff = (iter.next());
                 String pkgName = pkgDiff.name_;
                 if (trace) System.out.println("Package " + pkgName + " was changed.");
                 writePackageTableEntry(pkgName, 2, null, false);
@@ -213,39 +223,39 @@ public class HTMLReportGenerator {
             // Now emit a separate file for each changed package.
             writeText("<!-- Start of packages section -->");
             PackageDiff[] pkgDiffs = new PackageDiff[apiDiff.packagesChanged.size()];
-            pkgDiffs = (PackageDiff[])apiDiff.packagesChanged.toArray(pkgDiffs);
+            pkgDiffs = apiDiff.packagesChanged.toArray(pkgDiffs);
             for (int i = 0; i < pkgDiffs.length; i++) {
                 reportChangedPackage(pkgDiffs, i);
             }
         }
     }
-    
+
     private void removeIncompatibleChanges(APIDiff apiDiff) {
-	for (Iterator iter = apiDiff.packagesChanged.iterator(); iter.hasNext();) {
-	    PackageDiff pkgDiff = (PackageDiff) (iter.next());
-	    for (Iterator i = pkgDiff.classesChanged.iterator(); i.hasNext();) {
-		ClassDiff classDiff = (ClassDiff) i.next();
-		boolean hasCtors = classDiff.ctorsRemoved.size() != 0
-			|| classDiff.ctorsChanged.size() != 0;
-		boolean hasMethods = classDiff.methodsRemoved.size() != 0
-			|| classDiff.methodsChanged.size() != 0;
-		boolean hasFields = classDiff.fieldsRemoved.size() != 0
-			|| classDiff.fieldsChanged.size() != 0;
-		if (!(hasCtors || hasMethods || hasFields
-			|| classDiff.inheritanceChange_ != null
-			|| classDiff.modifiersChange_ != null)) {
-		    i.remove();
-		}
-	    }
-	    if (pkgDiff.classesChanged.isEmpty()
-		    && pkgDiff.classesRemoved.isEmpty()) {
-		iter.remove();
-	    }
-	}
+        for (Iterator<PackageDiff> iter = apiDiff.packagesChanged.iterator(); iter.hasNext(); ) {
+            PackageDiff pkgDiff = (iter.next());
+            for (Iterator<ClassDiff> i = pkgDiff.classesChanged.iterator(); i.hasNext(); ) {
+                ClassDiff classDiff = i.next();
+                boolean hasCtors = classDiff.ctorsRemoved.size() != 0
+                        || classDiff.ctorsChanged.size() != 0;
+                boolean hasMethods = classDiff.methodsRemoved.size() != 0
+                        || classDiff.methodsChanged.size() != 0;
+                boolean hasFields = classDiff.fieldsRemoved.size() != 0
+                        || classDiff.fieldsChanged.size() != 0;
+                if (!(hasCtors || hasMethods || hasFields
+                        || classDiff.inheritanceChange_ != null
+                        || classDiff.modifiersChange_ != null)) {
+                    i.remove();
+                }
+            }
+            if (pkgDiff.classesChanged.isEmpty()
+                    && pkgDiff.classesRemoved.isEmpty()) {
+                iter.remove();
+            }
+        }
     }
 
-    /** 
-     * Write out the details of a changed package in a separate file. 
+    /**
+     * Write out the details of a changed package in a separate file.
      */
     public void reportChangedPackage(PackageDiff[] pkgDiffs, int pkgIndex) {
         PackageDiff pkgDiff = pkgDiffs[pkgIndex];
@@ -267,9 +277,9 @@ public class HTMLReportGenerator {
             writeStyleSheetRef();
             writeText("</HEAD>");
             writeText("<BODY>");
-        } catch(IOException e) {
+        } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + localReportFileName);
-            System.out.println("Error: "+ e.getMessage());
+            System.out.println("Error: " + e.getMessage());
             System.exit(1);
         }
 
@@ -280,20 +290,20 @@ public class HTMLReportGenerator {
         String linkedPkgName = "<A HREF=\"" + pkgRef + ".html\" target=\"_top\"><tt>" + pkgName + "</tt></A>";
         String prevPkgRef = null;
         if (pkgIndex != 0) {
-            prevPkgRef = "pkg_" + pkgDiffs[pkgIndex-1].name_ + reportFileExt;
+            prevPkgRef = "pkg_" + pkgDiffs[pkgIndex - 1].name_ + reportFileExt;
         }
         // Create the HTML link to the next package
         String nextPkgRef = null;
         if (pkgIndex < pkgDiffs.length - 1) {
-            nextPkgRef = "pkg_" + pkgDiffs[pkgIndex+1].name_ + reportFileExt;
+            nextPkgRef = "pkg_" + pkgDiffs[pkgIndex + 1].name_ + reportFileExt;
         }
-        
-        writeSectionHeader("Package " + linkedPkgName, pkgName, 
-                           prevPkgRef, nextPkgRef,
-                           null, 1,
-                           pkgDiff.classesRemoved.size() != 0, 
-                           pkgDiff.classesAdded.size() != 0,
-                           pkgDiff.classesChanged.size() != 0);
+
+        writeSectionHeader("Package " + linkedPkgName, pkgName,
+                prevPkgRef, nextPkgRef,
+                null, 1,
+                pkgDiff.classesRemoved.size() != 0,
+                pkgDiff.classesAdded.size() != 0,
+                pkgDiff.classesChanged.size() != 0);
 
         // Report changes in documentation
         if (reportDocChanges && pkgDiff.documentationChange_ != null) {
@@ -303,16 +313,16 @@ public class HTMLReportGenerator {
             String newPkgRef = pkgDocRef;
             if (oldDocPrefix != null)
                 oldPkgRef = oldDocPrefix + oldPkgRef;
-            else 
+            else
                 oldPkgRef = null;
             newPkgRef = newDocPrefix + newPkgRef;
-            if (oldPkgRef != null) 
+            if (oldPkgRef != null)
                 pkgDiff.documentationChange_ += "<A HREF=\"" + oldPkgRef +
-                    ".html#package_description\" target=\"_self\"><tt>old</tt></A> to ";
+                        ".html#package_description\" target=\"_self\"><tt>old</tt></A> to ";
             else
                 pkgDiff.documentationChange_ += "<tt>old</tt> to ";
-            pkgDiff.documentationChange_ += "<A HREF=\"" + newPkgRef + 
-                ".html#package_description\" target=\"_self\"><tt>new</tt></A>. ";
+            pkgDiff.documentationChange_ += "<A HREF=\"" + newPkgRef +
+                    ".html#package_description\" target=\"_self\"><tt>new</tt></A>. ";
             writeText(pkgDiff.documentationChange_);
         }
 
@@ -321,9 +331,9 @@ public class HTMLReportGenerator {
             // Determine the title for this section
             boolean hasClasses = false;
             boolean hasInterfaces = false;
-            Iterator iter = pkgDiff.classesRemoved.iterator();
+            Iterator<ClassAPI> iter = pkgDiff.classesRemoved.iterator();
             while (iter.hasNext()) {
-                ClassAPI classAPI = (ClassAPI)(iter.next());
+                ClassAPI classAPI = (iter.next());
                 if (classAPI.isInterface_)
                     hasInterfaces = true;
                 else
@@ -332,28 +342,28 @@ public class HTMLReportGenerator {
             if (hasInterfaces && hasClasses)
                 writeTableStart("Removed Classes and Interfaces", 2);
             else if (!hasInterfaces && hasClasses)
-                     writeTableStart("Removed Classes", 2);
+                writeTableStart("Removed Classes", 2);
             else if (hasInterfaces && !hasClasses)
-                     writeTableStart("Removed Interfaces", 2);
+                writeTableStart("Removed Interfaces", 2);
             // Emit the table entries
             iter = pkgDiff.classesRemoved.iterator();
             while (iter.hasNext()) {
-                ClassAPI classAPI = (ClassAPI)(iter.next());
+                ClassAPI classAPI = (iter.next());
                 String className = classAPI.name_;
                 if (trace) System.out.println("Class/Interface " + className + " was removed.");
                 writeClassTableEntry(pkgName, className, 0, classAPI.isInterface_, classAPI.doc_, false);
             }
             writeTableEnd();
         }
-        
+
         // Report classes which were added in the new API
         if (!incompatibleChangesOnly && pkgDiff.classesAdded.size() != 0) {
             // Determine the title for this section
             boolean hasClasses = false;
             boolean hasInterfaces = false;
-            Iterator iter = pkgDiff.classesAdded.iterator();
+            Iterator<ClassAPI> iter = pkgDiff.classesAdded.iterator();
             while (iter.hasNext()) {
-                ClassAPI classAPI = (ClassAPI)(iter.next());
+                ClassAPI classAPI = (iter.next());
                 if (classAPI.isInterface_)
                     hasInterfaces = true;
                 else
@@ -362,13 +372,13 @@ public class HTMLReportGenerator {
             if (hasInterfaces && hasClasses)
                 writeTableStart("Added Classes and Interfaces", 2);
             else if (!hasInterfaces && hasClasses)
-                     writeTableStart("Added Classes", 2);
+                writeTableStart("Added Classes", 2);
             else if (hasInterfaces && !hasClasses)
-                     writeTableStart("Added Interfaces", 2);
+                writeTableStart("Added Interfaces", 2);
             // Emit the table entries
             iter = pkgDiff.classesAdded.iterator();
             while (iter.hasNext()) {
-                ClassAPI classAPI = (ClassAPI)(iter.next());
+                ClassAPI classAPI = (iter.next());
                 String className = classAPI.name_;
                 if (trace) System.out.println("Class/Interface " + className + " was added.");
                 writeClassTableEntry(pkgName, className, 1, classAPI.isInterface_, classAPI.doc_, false);
@@ -381,9 +391,9 @@ public class HTMLReportGenerator {
             // Determine the title for this section
             boolean hasClasses = false;
             boolean hasInterfaces = false;
-            Iterator iter = pkgDiff.classesChanged.iterator();
+            Iterator<ClassDiff> iter = pkgDiff.classesChanged.iterator();
             while (iter.hasNext()) {
-                ClassDiff classDiff = (ClassDiff)(iter.next());
+                ClassDiff classDiff = (iter.next());
                 if (classDiff.isInterface_)
                     hasInterfaces = true;
                 else
@@ -392,35 +402,36 @@ public class HTMLReportGenerator {
             if (hasInterfaces && hasClasses)
                 writeTableStart("Changed Classes and Interfaces", 2);
             else if (!hasInterfaces && hasClasses)
-                     writeTableStart("Changed Classes", 2);
+                writeTableStart("Changed Classes", 2);
             else if (hasInterfaces && !hasClasses)
-                     writeTableStart("Changed Interfaces", 2);
+                writeTableStart("Changed Interfaces", 2);
             // Emit a table of changed classes, with links to the file
             // for each class.
             iter = pkgDiff.classesChanged.iterator();
             while (iter.hasNext()) {
-                ClassDiff classDiff = (ClassDiff)(iter.next());
+                ClassDiff classDiff = (iter.next());
                 String className = classDiff.name_;
-                if (trace) System.out.println("Package " + pkgDiff.name_ + ", class/Interface " + className + " was changed.");
+                if (trace)
+                    System.out.println("Package " + pkgDiff.name_ + ", class/Interface " + className + " was changed.");
                 writeClassTableEntry(pkgName, className, 2, classDiff.isInterface_, null, false);
             }
             writeTableEnd();
             // Now emit a separate file for each changed class and interface.
             ClassDiff[] classDiffs = new ClassDiff[pkgDiff.classesChanged.size()];
-            classDiffs = (ClassDiff[])pkgDiff.classesChanged.toArray(classDiffs);
+            classDiffs = (ClassDiff[]) pkgDiff.classesChanged.toArray(classDiffs);
             for (int k = 0; k < classDiffs.length; k++) {
                 reportChangedClass(pkgName, classDiffs, k);
             }
         }
-        
+
         writeSectionFooter(pkgName, prevPkgRef, nextPkgRef, null, 1);
         writeHTMLFooter();
         reportFile.close();
         reportFile = oldReportFile;
     }
-    
-    /** 
-     * Write out the details of a changed class in a separate file. 
+
+    /**
+     * Write out the details of a changed class in a separate file.
      */
     public void reportChangedClass(String pkgName, ClassDiff[] classDiffs, int classIndex) {
         ClassDiff classDiff = classDiffs[classIndex];
@@ -440,9 +451,9 @@ public class HTMLReportGenerator {
             writeStyleSheetRef();
             writeText("</HEAD>");
             writeText("<BODY>");
-        } catch(IOException e) {
+        } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + localReportFileName);
-            System.out.println("Error: "+ e.getMessage());
+            System.out.println("Error: " + e.getMessage());
             System.exit(1);
         }
 
@@ -461,12 +472,12 @@ public class HTMLReportGenerator {
         //Links to the previous and next classes
         String prevClassRef = null;
         if (classIndex != 0) {
-            prevClassRef = pkgName + "." + classDiffs[classIndex-1].name_ + reportFileExt;
+            prevClassRef = pkgName + "." + classDiffs[classIndex - 1].name_ + reportFileExt;
         }
         // Create the HTML link to the next package
         String nextClassRef = null;
         if (classIndex < classDiffs.length - 1) {
-            nextClassRef = pkgName + "." + classDiffs[classIndex+1].name_ + reportFileExt;
+            nextClassRef = pkgName + "." + classDiffs[classIndex + 1].name_ + reportFileExt;
         }
 
         if (classDiff.isInterface_)
@@ -474,17 +485,17 @@ public class HTMLReportGenerator {
         else
             lcn = "Class " + lcn;
         boolean hasCtors = classDiff.ctorsRemoved.size() != 0 ||
-            classDiff.ctorsAdded.size() != 0 ||
-            classDiff.ctorsChanged.size() != 0;
+                classDiff.ctorsAdded.size() != 0 ||
+                classDiff.ctorsChanged.size() != 0;
         boolean hasMethods = classDiff.methodsRemoved.size() != 0 ||
-            classDiff.methodsAdded.size() != 0 ||
-            classDiff.methodsChanged.size() != 0;
+                classDiff.methodsAdded.size() != 0 ||
+                classDiff.methodsChanged.size() != 0;
         boolean hasFields = classDiff.fieldsRemoved.size() != 0 ||
-            classDiff.fieldsAdded.size() != 0 ||
-            classDiff.fieldsChanged.size() != 0;
-        writeSectionHeader(lcn, pkgName, prevClassRef, nextClassRef, 
-                           className, 2,
-                           hasCtors, hasMethods, hasFields);
+                classDiff.fieldsAdded.size() != 0 ||
+                classDiff.fieldsChanged.size() != 0;
+        writeSectionHeader(lcn, pkgName, prevClassRef, nextClassRef,
+                className, 2,
+                hasCtors, hasMethods, hasFields);
 
         if (classDiff.inheritanceChange_ != null)
             writeText("<p><font size=\"+1\">" + classDiff.inheritanceChange_ + "</font>");
@@ -503,13 +514,13 @@ public class HTMLReportGenerator {
                     oldClassRef = oldDocPrefix + oldClassRef;
                 }
             }
-            if (oldDocPrefix != null) 
+            if (oldDocPrefix != null)
                 classDiff.documentationChange_ += "<A HREF=\"" + oldClassRef +
-                    ".html\" target=\"_self\"><tt>old</tt></A> to ";
+                        ".html\" target=\"_self\"><tt>old</tt></A> to ";
             else
                 classDiff.documentationChange_ += "<tt>old</tt> to ";
-            classDiff.documentationChange_ += "<A HREF=\"" + classRef + 
-                ".html\" target=\"_self\"><tt>new</tt></A>. ";
+            classDiff.documentationChange_ += "<A HREF=\"" + classRef +
+                    ".html\" target=\"_self\"><tt>new</tt></A>. ";
             writeText(classDiff.documentationChange_);
         }
 
@@ -526,8 +537,8 @@ public class HTMLReportGenerator {
         reportFile = oldReportFile;
     }
 
-    /** 
-     * Write out the details of constructors in a class. 
+    /**
+     * Write out the details of constructors in a class.
      */
     public void reportAllCtors(String pkgName, ClassDiff classDiff) {
         String className = classDiff.name_;
@@ -535,9 +546,9 @@ public class HTMLReportGenerator {
         // Report ctors which were removed in the new API
         if (classDiff.ctorsRemoved.size() != 0) {
             writeTableStart("Removed Constructors", 2);
-            Iterator iter = classDiff.ctorsRemoved.iterator();
+            Iterator<ConstructorAPI> iter = classDiff.ctorsRemoved.iterator();
             while (iter.hasNext()) {
-                ConstructorAPI ctorAPI = (ConstructorAPI)(iter.next());
+                ConstructorAPI ctorAPI = (iter.next());
                 String ctorType = ctorAPI.type_;
                 if (ctorType.compareTo("void") == 0)
                     ctorType = "";
@@ -551,9 +562,9 @@ public class HTMLReportGenerator {
         // Report ctors which were added in the new API
         if (!incompatibleChangesOnly && classDiff.ctorsAdded.size() != 0) {
             writeTableStart("Added Constructors", 2);
-            Iterator iter = classDiff.ctorsAdded.iterator();
+            Iterator<ConstructorAPI> iter = classDiff.ctorsAdded.iterator();
             while (iter.hasNext()) {
-                ConstructorAPI ctorAPI = (ConstructorAPI)(iter.next());
+                ConstructorAPI ctorAPI = (iter.next());
                 String ctorType = ctorAPI.type_;
                 if (ctorType.compareTo("void") == 0)
                     ctorType = "";
@@ -563,26 +574,26 @@ public class HTMLReportGenerator {
             }
             writeTableEnd();
         }
-        
+
         // Report ctors which were changed in the new API
         if (classDiff.ctorsChanged.size() != 0) {
             // Emit a table of changed classes, with links to the section
             // for each class.
             writeTableStart("Changed Constructors", 3);
-            Iterator iter = classDiff.ctorsChanged.iterator();
+            Iterator<MemberDiff> iter = classDiff.ctorsChanged.iterator();
             while (iter.hasNext()) {
-                MemberDiff memberDiff = (MemberDiff)(iter.next());
+                MemberDiff memberDiff = (iter.next());
                 if (trace) System.out.println("Constructor for " + className +
-                    " was changed from " + memberDiff.oldType_ + " to " + 
-                    memberDiff.newType_);
+                        " was changed from " + memberDiff.oldType_ + " to " +
+                        memberDiff.newType_);
                 writeCtorChangedTableEntry(pkgName, className, memberDiff);
             }
             writeTableEnd();
         }
     }
 
-    /** 
-     * Write out the details of methods in a class. 
+    /**
+     * Write out the details of methods in a class.
      */
     public void reportAllMethods(String pkgName, ClassDiff classDiff) {
         writeText("<a NAME=\"methods\"></a>"); // Named anchor
@@ -590,9 +601,9 @@ public class HTMLReportGenerator {
         // Report methods which were removed in the new API
         if (classDiff.methodsRemoved.size() != 0) {
             writeTableStart("Removed Methods", 2);
-            Iterator iter = classDiff.methodsRemoved.iterator();
+            Iterator<MethodAPI> iter = classDiff.methodsRemoved.iterator();
             while (iter.hasNext()) {
-                MethodAPI methodAPI = (MethodAPI)(iter.next());
+                MethodAPI methodAPI = (iter.next());
                 String methodName = methodAPI.name_ + "(" + methodAPI.getSignature() + ")";
                 if (trace) System.out.println("Method " + methodName + " was removed.");
                 writeMethodTableEntry(pkgName, className, methodAPI, 0, methodAPI.doc_, false);
@@ -603,33 +614,33 @@ public class HTMLReportGenerator {
         // Report methods which were added in the new API
         if (!incompatibleChangesOnly && classDiff.methodsAdded.size() != 0) {
             writeTableStart("Added Methods", 2);
-            Iterator iter = classDiff.methodsAdded.iterator();
+            Iterator<MethodAPI> iter = classDiff.methodsAdded.iterator();
             while (iter.hasNext()) {
-                MethodAPI methodAPI = (MethodAPI)(iter.next());
+                MethodAPI methodAPI = (iter.next());
                 String methodName = methodAPI.name_ + "(" + methodAPI.getSignature() + ")";
                 if (trace) System.out.println("Method " + methodName + " was added.");
                 writeMethodTableEntry(pkgName, className, methodAPI, 1, methodAPI.doc_, false);
             }
             writeTableEnd();
         }
-        
+
         // Report methods which were changed in the new API
         if (classDiff.methodsChanged.size() != 0) {
             // Emit a table of changed methods.
             writeTableStart("Changed Methods", 3);
-            Iterator iter = classDiff.methodsChanged.iterator();
+            Iterator<MemberDiff> iter = classDiff.methodsChanged.iterator();
             while (iter.hasNext()) {
-                MemberDiff memberDiff = (MemberDiff)(iter.next());
-                if (trace) System.out.println("Method " + memberDiff.name_ + 
-                      " was changed.");
+                MemberDiff memberDiff = (iter.next());
+                if (trace) System.out.println("Method " + memberDiff.name_ +
+                        " was changed.");
                 writeMethodChangedTableEntry(pkgName, className, memberDiff);
             }
             writeTableEnd();
         }
     }
 
-    /** 
-     * Write out the details of fields in a class. 
+    /**
+     * Write out the details of fields in a class.
      */
     public void reportAllFields(String pkgName, ClassDiff classDiff) {
         writeText("<a NAME=\"fields\"></a>"); // Named anchor
@@ -637,59 +648,64 @@ public class HTMLReportGenerator {
         // Report fields which were removed in the new API
         if (classDiff.fieldsRemoved.size() != 0) {
             writeTableStart("Removed Fields", 2);
-            Iterator iter = classDiff.fieldsRemoved.iterator();
+            Iterator<FieldAPI> iter = classDiff.fieldsRemoved.iterator();
             while (iter.hasNext()) {
-                FieldAPI fieldAPI = (FieldAPI)(iter.next());
+                FieldAPI fieldAPI = (iter.next());
                 String fieldName = fieldAPI.name_;
                 if (trace) System.out.println("Field " + fieldName + " was removed.");
                 writeFieldTableEntry(pkgName, className, fieldAPI, 0, fieldAPI.doc_, false);
             }
             writeTableEnd();
         }
-        
+
         // Report fields which were added in the new API
         if (!incompatibleChangesOnly && classDiff.fieldsAdded.size() != 0) {
             writeTableStart("Added Fields", 2);
-            Iterator iter = classDiff.fieldsAdded.iterator();
+            Iterator<FieldAPI> iter = classDiff.fieldsAdded.iterator();
             while (iter.hasNext()) {
-                FieldAPI fieldAPI = (FieldAPI)(iter.next());
+                FieldAPI fieldAPI = (iter.next());
                 String fieldName = fieldAPI.name_;
                 if (trace) System.out.println("Field " + fieldName + " was added.");
                 writeFieldTableEntry(pkgName, className, fieldAPI, 1, fieldAPI.doc_, false);
             }
             writeTableEnd();
         }
-        
+
         // Report fields which were changed in the new API
         if (classDiff.fieldsChanged.size() != 0) {
             // Emit a table of changed classes, with links to the section
             // for each class.
             writeTableStart("Changed Fields", 3);
-            Iterator iter = classDiff.fieldsChanged.iterator();
+            Iterator<MemberDiff> iter = classDiff.fieldsChanged.iterator();
             while (iter.hasNext()) {
-                MemberDiff memberDiff = (MemberDiff)(iter.next());
-                if (trace) System.out.println("Field " + pkgName + "." + className + "." + memberDiff.name_ + " was changed from " + memberDiff.oldType_ + " to " + memberDiff.newType_);
+                MemberDiff memberDiff = (iter.next());
+                if (trace)
+                    System.out.println("Field " + pkgName + "." + className + "." + memberDiff.name_ + " was changed from " + memberDiff.oldType_ + " to " + memberDiff.newType_);
                 writeFieldChangedTableEntry(pkgName, className, memberDiff);
             }
             writeTableEnd();
         }
-        
+
     }
 
-    /** 
+    /**
      * Write the start of the HTML header, together with the current
-     * date and time in an HTML comment. 
+     * date and time in an HTML comment.
      */
     public void writeStartHTMLHeaderWithDate() {
         writeStartHTMLHeader(true);
     }
 
-    /** Write the start of the HTML header. */
+    /**
+     * Write the start of the HTML header.
+     */
     public void writeStartHTMLHeader() {
         writeStartHTMLHeader(false);
     }
 
-    /** Write the start of the HTML header. */
+    /**
+     * Write the start of the HTML header.
+     */
     public void writeStartHTMLHeader(boolean addDate) {
         writeText("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Frameset//EN\"\"" + RootDocToXML.baseURI + "/TR/REC-html40/frameset.dtd\">");
         writeText("<HTML>");
@@ -703,21 +719,23 @@ public class HTMLReportGenerator {
         writeText("<meta name=\"keywords\" content=\"" + JDiff.jDiffKeywords + "\">");
     }
 
-    /** Write the HTML title */
+    /**
+     * Write the HTML title
+     */
     public void writeHTMLTitle(String title) {
         writeText("<TITLE>");
         writeText(title);
         writeText("</TITLE>");
     }
 
-    /** 
+    /**
      * Write the HTML style sheet reference for files in the subdirectory.
      */
     public void writeStyleSheetRef() {
         writeStyleSheetRef(false);
     }
 
-    /** 
+    /**
      * Write the HTML style sheet reference. If inSameDir is set, don't add
      * "../" to the location.
      */
@@ -734,82 +752,84 @@ public class HTMLReportGenerator {
 //        writeText("</STYLE>");
     }
 
-    /** Write the HTML footer. */
+    /**
+     * Write the HTML footer.
+     */
     public void writeHTMLFooter() {
         writeText("</BODY>");
         writeText("</HTML>");
     }
 
-    /** 
-     * Write a section header, which includes a navigation bar. 
-     * 
-     * @param title Title of the header. Contains any links necessary.
-     * @param packageName The name of the current package, with no slashes or 
-     *                    links in it. May be null
-     * @param prevElemLink An HTML link to the previous element (a package or 
+    /**
+     * Write a section header, which includes a navigation bar.
+     *
+     * @param title        Title of the header. Contains any links necessary.
+     * @param packageName  The name of the current package, with no slashes or
+     *                     links in it. May be null
+     * @param prevElemLink An HTML link to the previous element (a package or
      *                     class). May be null.
-     * @param nextElemLink An HTML link to the next element (a package or 
+     * @param nextElemLink An HTML link to the next element (a package or
      *                     class). May be null.
-     * @param className The name of the current class, with no slashes or 
-     *                  links in it. May be null.
-     * @param level 0 = overview, 1 = package, 2 = class/interface
+     * @param className    The name of the current class, with no slashes or
+     *                     links in it. May be null.
+     * @param level        0 = overview, 1 = package, 2 = class/interface
      */
-    public void writeSectionHeader(String title, String packageName, 
+    public void writeSectionHeader(String title, String packageName,
                                    String prevElemLink, String nextElemLink,
-                                   String className, int level, 
-                                   boolean hasRemovals, 
-                                   boolean hasAdditions, 
+                                   String className, int level,
+                                   boolean hasRemovals,
+                                   boolean hasAdditions,
                                    boolean hasChanges) {
         writeNavigationBar(packageName, prevElemLink, nextElemLink,
-                           className, level, true,
-                           hasRemovals, hasAdditions, hasChanges);
+                className, level, true,
+                hasRemovals, hasAdditions, hasChanges);
         if (level != 0) {
             reportFile.println("<H2>");
             reportFile.println(title);
             reportFile.println("</H2>");
         }
     }
-    
-    /** 
-     * Write a section footer, which includes a navigation bar. 
-     * 
-     * @param packageName The name of the current package, with no slashes or 
-     *                    links in it. may be null
-     * @param prevElemLink An HTML link to the previous element (a package or 
+
+    /**
+     * Write a section footer, which includes a navigation bar.
+     *
+     * @param packageName  The name of the current package, with no slashes or
+     *                     links in it. may be null
+     * @param prevElemLink An HTML link to the previous element (a package or
      *                     class). May be null.
-     * @param nextElemLink An HTML link to the next element (a package or 
+     * @param nextElemLink An HTML link to the next element (a package or
      *                     class). May be null.
-     * @param className The name of the current class, with no slashes or 
-     *                  links in it. May be null
-     * @param level 0 = overview, 1 = package, 2 = class/interface
+     * @param className    The name of the current class, with no slashes or
+     *                     links in it. May be null
+     * @param level        0 = overview, 1 = package, 2 = class/interface
      */
-    public void writeSectionFooter(String packageName, 
+    public void writeSectionFooter(String packageName,
                                    String prevElemLink, String nextElemLink,
                                    String className, int level) {
         reportFile.println("<HR>");
-        writeNavigationBar(packageName, prevElemLink, nextElemLink, 
-                           className, level, false,
-                           false, false, false);
+        writeNavigationBar(packageName, prevElemLink, nextElemLink,
+                className, level, false,
+                false, false, false);
     }
-    
-    /** 
-     * Write a navigation bar section header. 
-     * 
-     * @param pkgName The name of the current package, with no slashes or 
-     *                links in it.
-     * @param prevElemLink An HTML link to the previous element (a package or 
+
+    /**
+     * Write a navigation bar section header.
+     *
+     * @param pkgName      The name of the current package, with no slashes or
+     *                     links in it.
+     * @param prevElemLink An HTML link to the previous element (a package or
      *                     class). May be null.
-     * @param nextElemLink An HTML link to the next element (a package or 
+     * @param nextElemLink An HTML link to the next element (a package or
      *                     class). May be null.
-     * @param className The name of the current class, with no slashes or 
-     *                links in it. May be null.
-     * @param level 0 = overview, 1 = package, 2 = class/interface
+     * @param className    The name of the current class, with no slashes or
+     *                     links in it. May be null.
+     * @param level        0 = overview, 1 = package, 2 = class/interface
      */
     public void writeNavigationBar(String pkgName,
                                    String prevElemLink, String nextElemLink,
                                    String className, int level,
                                    boolean upperNavigationBar,
-                                   boolean hasRemovals, boolean hasAdditions, 
+                                   boolean hasRemovals, boolean hasAdditions,
                                    boolean hasChanges) {
         reportFile.println("<!-- Start of nav bar -->");
         reportFile.println("<TABLE summary=\"Navigation bar\" BORDER=\"0\" WIDTH=\"100%\" CELLPADDING=\"1\" CELLSPACING=\"0\">");
@@ -823,12 +843,12 @@ public class HTMLReportGenerator {
 
         // Always have a link to the Javadoc files
         if (atOverview) {
-            reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <A HREF=\"" + newDocPrefix + "index.html\" target=\"_top\"><FONT CLASS=\"NavBarFont1\"><B><tt>" + apiDiff.newAPIName_ + "</tt></B></FONT></A>&nbsp;</TD>");
+            reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <A HREF=\"" + newDocPrefix + "index.html\" target=\"_top\"><FONT CLASS=\"NavBarFont1\"><B><tt>" + APIDiff.newAPIName_ + "</tt></B></FONT></A>&nbsp;</TD>");
         } else if (atPackage) {
             String pkgRef = pkgName;
             pkgRef = pkgRef.replace('.', '/');
             pkgRef = newDocPrefix + pkgRef + "/package-summary";
-            reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <A HREF=\"" + pkgRef + ".html\" target=\"_top\"><FONT CLASS=\"NavBarFont1\"><B><tt>" + apiDiff.newAPIName_ + "</tt></B></FONT></A>&nbsp;</TD>");
+            reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <A HREF=\"" + pkgRef + ".html\" target=\"_top\"><FONT CLASS=\"NavBarFont1\"><B><tt>" + APIDiff.newAPIName_ + "</tt></B></FONT></A>&nbsp;</TD>");
         } else if (atClass) {
             String classRef = pkgName + "." + className;
             classRef = classRef.replace('.', '/');
@@ -839,7 +859,7 @@ public class HTMLReportGenerator {
             } else {
                 classRef = newDocPrefix + classRef;
             }
-            reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <A HREF=\"" + classRef + ".html\" target=\"_top\"><FONT CLASS=\"NavBarFont1\"><B><tt>" + apiDiff.newAPIName_ + "</tt></B></FONT></A>&nbsp;</TD>");
+            reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <A HREF=\"" + classRef + ".html\" target=\"_top\"><FONT CLASS=\"NavBarFont1\"><B><tt>" + APIDiff.newAPIName_ + "</tt></B></FONT></A>&nbsp;</TD>");
         }
 
         if (atOverview) {
@@ -862,15 +882,15 @@ public class HTMLReportGenerator {
 
         if (!Diff.noDocDiffs) {
             if (atPackage) {
-                String id = (String)Diff.firstDiffOutput.get(pkgName + "!package");
+                String id = Diff.firstDiffOutput.get(pkgName + "!package");
                 if (id != null)
-                    reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <A HREF=\"" + Diff.diffFileName + "index" + reportFileExt  + "#" + id + "\"><FONT CLASS=\"NavBarFont1\"><B>Text Changes</B></FONT></A>&nbsp;</TD>");
+                    reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <A HREF=\"" + Diff.diffFileName + "index" + reportFileExt + "#" + id + "\"><FONT CLASS=\"NavBarFont1\"><B>Text Changes</B></FONT></A>&nbsp;</TD>");
                 else
                     reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <FONT CLASS=\"NavBarFont1\">Text Changes</FONT>&nbsp;</TD>");
             } else if (atClass) {
-                String id = (String)Diff.firstDiffOutput.get(pkgName + "." + className + "!class");
+                String id = Diff.firstDiffOutput.get(pkgName + "." + className + "!class");
                 if (id != null)
-                    reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <A HREF=\"" + Diff.diffFileName + "index" + reportFileExt  + "#" + id + "\"><FONT CLASS=\"NavBarFont1\"><B>Text Changes</B></FONT></A>&nbsp;</TD>");
+                    reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <A HREF=\"" + Diff.diffFileName + "index" + reportFileExt + "#" + id + "\"><FONT CLASS=\"NavBarFont1\"><B>Text Changes</B></FONT></A>&nbsp;</TD>");
                 else
                     reportFile.println("      <TD BGCOLOR=\"#EEEEFF\" CLASS=\"NavBarCell1\"> <FONT CLASS=\"NavBarFont1\">Text Changes</FONT>&nbsp;</TD>");
             } else {
@@ -901,7 +921,7 @@ public class HTMLReportGenerator {
 
         // All of the previous and next links, and the frames and non-frames 
         // links are in one table cell
-        reportFile.println("  <TD BGCOLOR=\"" + bgcolor + "\" CLASS=\"NavBarCell2\"><FONT SIZE=\"-2\">");        
+        reportFile.println("  <TD BGCOLOR=\"" + bgcolor + "\" CLASS=\"NavBarCell2\"><FONT SIZE=\"-2\">");
         // Display links to the previous and next packages or classes
         if (atPackage || atClass) {
             String elemName = "CLASS";
@@ -920,7 +940,7 @@ public class HTMLReportGenerator {
             }
             reportFile.println("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
         } else {
-            reportFile.println("  &nbsp;&nbsp;");        
+            reportFile.println("  &nbsp;&nbsp;");
         }
         // Links for frames and non-frames.
         reportFile.println("  <A HREF=\"" + "../" + reportFileName + reportFileExt + "\" TARGET=\"_top\"><B>FRAMES</B></A>  &nbsp;");
@@ -938,9 +958,9 @@ public class HTMLReportGenerator {
         if (atClass) {
             // Links to a class page's sections
             // The meaning of these three variable is overloaded
-            boolean hasCtors = hasRemovals; 
-            boolean hasMethods = hasAdditions; 
-            boolean hasFields = hasChanges; 
+            boolean hasCtors = hasRemovals;
+            boolean hasMethods = hasAdditions;
+            boolean hasFields = hasChanges;
             if (hasCtors || hasMethods || hasFields) {
                 reportFile.println("  <TD BGCOLOR=\"" + bgcolor + "\" CLASS=\"NavBarCell3\"><FONT SIZE=\"-2\"> DETAIL: &nbsp;");
                 if (hasCtors) {
@@ -961,7 +981,7 @@ public class HTMLReportGenerator {
                 reportFile.println("  </FONT></TD>");
             } else {
                 // Make the end of the table line match the length of the top
-                reportFile.println("<TD BGCOLOR=\"0xFFFFFF\" CLASS=\"NavBarCell3\"></TD>"); 
+                reportFile.println("<TD BGCOLOR=\"0xFFFFFF\" CLASS=\"NavBarCell3\"></TD>");
             }
         } else {
             // Links to a package page's sections
@@ -985,7 +1005,7 @@ public class HTMLReportGenerator {
                 reportFile.println("  </FONT></TD>");
             } else {
                 // Make the end of the table line match the length of the top
-                reportFile.println("<TD BGCOLOR=\"0xFFFFFF\" CLASS=\"NavBarCell3\"></TD>"); 
+                reportFile.println("<TD BGCOLOR=\"0xFFFFFF\" CLASS=\"NavBarCell3\"></TD>");
             }
         }
 
@@ -994,8 +1014,10 @@ public class HTMLReportGenerator {
         reportFile.println("<HR>");
         reportFile.println("<!-- End of nav bar -->");
     }
-    
-    /** Write the start of a table. */
+
+    /**
+     * Write the start of a table.
+     */
     public void writeTableStart(String title, int colSpan) {
         reportFile.println("<p>");
         // Assumes that the first word of the title categorizes the table type
@@ -1003,14 +1025,14 @@ public class HTMLReportGenerator {
         int idx = title.indexOf(' ');
         String namedAnchor = title.substring(0, idx);
         reportFile.println("<a NAME=\"" + namedAnchor + "\"></a>"); // Named anchor
-        reportFile.println("<TABLE summary=\"" + title+ "\" BORDER=\"1\" CELLPADDING=\"3\" CELLSPACING=\"0\" WIDTH=\"100%\">");
+        reportFile.println("<TABLE summary=\"" + title + "\" BORDER=\"1\" CELLPADDING=\"3\" CELLSPACING=\"0\" WIDTH=\"100%\">");
         reportFile.println("<TR BGCOLOR=\"#CCCCFF\" CLASS=\"TableHeadingColor\">");
         reportFile.print("  <TD VALIGN=\"TOP\" COLSPAN=" + colSpan + "><FONT SIZE=\"+1\">");
         reportFile.println("<B>" + title + "</B></FONT></TD>");
         reportFile.println("</TR>");
     }
 
-    /** 
+    /**
      * If a class or package name is considered to be too long for convenient
      * display, insert <br> in the middle of it at a period.
      */
@@ -1021,17 +1043,17 @@ public class HTMLReportGenerator {
         if (idx == -1)
             return name;
         int len = name.length();
-        String res = name.substring(0, idx+1) + "<br>" + name.substring(idx+1, len);
+        String res = name.substring(0, idx + 1) + "<br>" + name.substring(idx + 1, len);
         return res;
     }
 
-    /** 
-     * Write a table entry for a package, with support for links to Javadoc 
-     * for removed packages. 
-     *
+    /**
+     * Write a table entry for a package, with support for links to Javadoc
+     * for removed packages.
+     * <p>
      * linkType: 0 - no link by default, 1 = link to Javadoc HTML file, 2 = link to JDiff file
      */
-    public void writePackageTableEntry(String pkgName, int linkType, 
+    public void writePackageTableEntry(String pkgName, int linkType,
                                        String possibleComment, boolean useOld) {
         if (!useOld) {
             reportFile.println("<TR BGCOLOR=\"" + bgcolor + "\" CLASS=\"TableRowColor\">");
@@ -1059,7 +1081,7 @@ public class HTMLReportGenerator {
             reportFile.println("  <nobr><A HREF=\"" + pkgRef + ".html\" target=\"_top\"><tt>" + shownPkgName + "</tt></A></nobr>");
         } else if (linkType == 2) {
             reportFile.println("  <nobr><A HREF=\"pkg_" + pkgName + reportFileExt + "\">" + shownPkgName + "</A></nobr>");
-        } 
+        }
         if (!useOld) {
             reportFile.println("  </TD>");
             emitComment(pkgName, possibleComment, linkType);
@@ -1067,13 +1089,13 @@ public class HTMLReportGenerator {
         }
     }
 
-    /** 
-     * Write a table entry for a class or interface. 
-     *
+    /**
+     * Write a table entry for a class or interface.
+     * <p>
      * linkType: 0 - no link by default, 1 = link to Javadoc HTML file, 2 = link to JDiff file
      */
-    public void writeClassTableEntry(String pkgName, String className, 
-                                     int linkType, boolean isInterface, 
+    public void writeClassTableEntry(String pkgName, String className,
+                                     int linkType, boolean isInterface,
                                      String possibleComment, boolean useOld) {
         if (!useOld) {
             reportFile.println("<TR BGCOLOR=\"" + bgcolor + "\" CLASS=\"TableRowColor\">");
@@ -1090,9 +1112,9 @@ public class HTMLReportGenerator {
                 else
                     reportFile.println("  " + shownClassName);
             } else {
-                writeClassTableEntry(pkgName, className, 
-                                     1, isInterface, 
-                                     possibleComment, true);
+                writeClassTableEntry(pkgName, className,
+                        1, isInterface,
+                        possibleComment, true);
             }
         } else if (linkType == 1) {
             // Link to HTML file for the class
@@ -1125,7 +1147,7 @@ public class HTMLReportGenerator {
             else
                 reportFile.print(shownClassName);
             reportFile.println("</A></nobr>");
-        } 
+        }
         if (!useOld) {
             reportFile.println("  </TD>");
             emitComment(fqName, possibleComment, linkType);
@@ -1133,18 +1155,18 @@ public class HTMLReportGenerator {
         }
     }
 
-    /** 
-     * Write a table entry for a constructor. 
-     *
+    /**
+     * Write a table entry for a constructor.
+     * <p>
      * linkType: 0 - no link by default, 1 = link to Javadoc HTML file
      */
-    public void writeCtorTableEntry(String pkgName, String className, 
-                                    String type, int linkType, 
+    public void writeCtorTableEntry(String pkgName, String className,
+                                    String type, int linkType,
                                     String possibleComment, boolean useOld) {
         String fqName = pkgName + "." + className;
         String shownClassName = makeTwoRows(className);
         String lt = "removed";
-        if (linkType ==1)
+        if (linkType == 1)
             lt = "added";
         String commentID = fqName + ".ctor_" + lt + "(" + type + ")";
         if (!useOld) {
@@ -1160,9 +1182,9 @@ public class HTMLReportGenerator {
                 emitTypeWithParens(shortType);
                 reportFile.println("</nobr>");
             } else {
-                writeCtorTableEntry(pkgName, className, 
-                                    type, 1, 
-                                    possibleComment, true);
+                writeCtorTableEntry(pkgName, className,
+                        type, 1,
+                        possibleComment, true);
             }
         } else if (linkType == 1) {
             // Link to HTML file for the package
@@ -1186,7 +1208,7 @@ public class HTMLReportGenerator {
                 }
             }
             reportFile.print("  <nobr><A HREF=\"" + memberRef + ".html#" + className +
-                             "(" + type + ")\" target=\"_top\"><tt>" + shownClassName + "</tt></A>");
+                    "(" + type + ")\" target=\"_top\"><tt>" + shownClassName + "</tt></A>");
             emitTypeWithParens(shortType);
             reportFile.println("</nobr>");
         }
@@ -1197,10 +1219,10 @@ public class HTMLReportGenerator {
         }
     }
 
-    /** 
+    /**
      * Write a table entry for a changed constructor.
      */
-    public void writeCtorChangedTableEntry(String pkgName, String className, 
+    public void writeCtorChangedTableEntry(String pkgName, String className,
                                            MemberDiff memberDiff) {
         String fqName = pkgName + "." + className;
         String newSignature = memberDiff.newType_;
@@ -1210,7 +1232,7 @@ public class HTMLReportGenerator {
         reportFile.println("<TR BGCOLOR=\"" + bgcolor + "\" CLASS=\"TableRowColor\">");
         reportFile.println("  <TD VALIGN=\"TOP\" WIDTH=\"25%\">");
         reportFile.println("  <A NAME=\"" + commentID + "\"></A>"); // Named anchor
-        String memberRef = fqName.replace('.', '/');            
+        String memberRef = fqName.replace('.', '/');
         String shownClassName = makeTwoRows(className);
         // Deal with inner classes
         if (className.indexOf('.') != -1) {
@@ -1231,7 +1253,7 @@ public class HTMLReportGenerator {
         emitTypeWithParens(shortNewType);
         reportFile.println("  </nobr>");
         reportFile.println("  </TD>");
-        
+
         // Report changes in documentation
         if (reportDocChanges && memberDiff.documentationChange_ != null) {
             String oldMemberRef = null;
@@ -1250,15 +1272,15 @@ public class HTMLReportGenerator {
                 if (oldType.compareTo("void") == 0)
                     oldType = "";
             }
-            if (oldDocPrefix != null) 
-                memberDiff.documentationChange_ += "<A HREF=\"" + 
-                    oldMemberRef + ".html#" + className + "(" + oldType + 
-                    ")\" target=\"_self\"><tt>old</tt></A> to ";
-            else 
+            if (oldDocPrefix != null)
+                memberDiff.documentationChange_ += "<A HREF=\"" +
+                        oldMemberRef + ".html#" + className + "(" + oldType +
+                        ")\" target=\"_self\"><tt>old</tt></A> to ";
+            else
                 memberDiff.documentationChange_ += "<tt>old</tt> to ";
-            memberDiff.documentationChange_ += "<A HREF=\"" + memberRef + 
-                ".html#" + className + "(" + newType + 
-                ")\" target=\"_self\"><tt>new</tt></A>.<br>";
+            memberDiff.documentationChange_ += "<A HREF=\"" + memberRef +
+                    ".html#" + className + "(" + newType +
+                    ")\" target=\"_self\"><tt>new</tt></A>.<br>";
         }
 
         emitChanges(memberDiff, 0);
@@ -1267,19 +1289,19 @@ public class HTMLReportGenerator {
         reportFile.println("</TR>");
     }
 
-    /** 
-     * Write a table entry for a method. 
-     *
+    /**
+     * Write a table entry for a method.
+     * <p>
      * linkType: 0 - no link by default, 1 = link to Javadoc HTML file
      */
-    public void writeMethodTableEntry(String pkgName, String className, 
-                                      MethodAPI methodAPI, int linkType, 
+    public void writeMethodTableEntry(String pkgName, String className,
+                                      MethodAPI methodAPI, int linkType,
                                       String possibleComment, boolean useOld) {
         String fqName = pkgName + "." + className;
-        String signature = methodAPI.getSignature(); 
+        String signature = methodAPI.getSignature();
         String methodName = methodAPI.name_;
         String lt = "removed";
-        if (linkType ==1)
+        if (linkType == 1)
             lt = "added";
         String commentID = fqName + "." + methodName + "_" + lt + "(" + signature + ")";
         if (!useOld) {
@@ -1301,9 +1323,9 @@ public class HTMLReportGenerator {
                 emitTypeWithParens(shortSignature);
                 reportFile.println("</nobr>");
             } else {
-                writeMethodTableEntry(pkgName, className, 
-                                      methodAPI, 1, 
-                                      possibleComment, true);
+                writeMethodTableEntry(pkgName, className,
+                        methodAPI, 1,
+                        possibleComment, true);
             }
         } else if (linkType == 1) {
             // Link to HTML file for the package
@@ -1329,7 +1351,7 @@ public class HTMLReportGenerator {
             reportFile.print("  <nobr>");
             emitType(shortReturnType);
             reportFile.print("&nbsp;<A HREF=\"" + memberRef + ".html#" + methodName +
-               "(" + signature + ")\" target=\"_top\"><tt>" + methodName + "</tt></A>");
+                    "(" + signature + ")\" target=\"_top\"><tt>" + methodName + "</tt></A>");
             emitTypeWithParens(shortSignature);
             reportFile.println("</nobr>");
         }
@@ -1343,8 +1365,8 @@ public class HTMLReportGenerator {
     /**
      * Write a table entry for a changed method.
      */
-    public void writeMethodChangedTableEntry(String pkgName, String className, 
-                                      MemberDiff memberDiff) {
+    public void writeMethodChangedTableEntry(String pkgName, String className,
+                                             MemberDiff memberDiff) {
         String memberName = memberDiff.name_;
         // Generally nowhere to break a member name anyway
         // String shownMemberName = makeTwoRows(memberName);
@@ -1355,7 +1377,7 @@ public class HTMLReportGenerator {
 
         reportFile.println("  <TD VALIGN=\"TOP\" WIDTH=\"25%\">");
         reportFile.println("  <A NAME=\"" + commentID + "\"></A>"); // Named anchor
-        String memberRef = fqName.replace('.', '/');            
+        String memberRef = fqName.replace('.', '/');
         // Deal with inner classes
         if (className.indexOf('.') != -1) {
             memberRef = pkgName + ".";
@@ -1368,26 +1390,26 @@ public class HTMLReportGenerator {
         // inherited from other classes, so link to the defining class' method.
         // Only copes with non-inner classes.
         if (className.indexOf('.') == -1 &&
-            memberDiff.modifiersChange_ != null &&
-            memberDiff.modifiersChange_.indexOf("but is now inherited from") != -1) {
+                memberDiff.modifiersChange_ != null &&
+                memberDiff.modifiersChange_.indexOf("but is now inherited from") != -1) {
             memberRef = memberDiff.inheritedFrom_;
-            memberRef = memberRef.replace('.', '/'); 
+            memberRef = memberRef.replace('.', '/');
             memberRef = newDocPrefix + memberRef;
         }
-        
+
         String newReturnType = memberDiff.newType_;
-        String shortReturnType = simpleName(newReturnType); 
-        String shortSignature = simpleName(newSignature);        
+        String shortReturnType = simpleName(newReturnType);
+        String shortSignature = simpleName(newSignature);
         reportFile.print("  <nobr>");
-        emitTypeWithNoParens(shortReturnType); 
-        reportFile.print("&nbsp;<A HREF=\"" + memberRef + ".html#" + 
-                         memberName + "(" + newSignature + ")\" target=\"_top\"><tt>");
+        emitTypeWithNoParens(shortReturnType);
+        reportFile.print("&nbsp;<A HREF=\"" + memberRef + ".html#" +
+                memberName + "(" + newSignature + ")\" target=\"_top\"><tt>");
         reportFile.print(memberName);
         reportFile.print("</tt></A>");
         emitTypeWithParens(shortSignature);
         reportFile.println("  </nobr>");
         reportFile.println("  </TD>");
-        
+
         // Report changes in documentation
         if (reportDocChanges && memberDiff.documentationChange_ != null) {
             String oldMemberRef = null;
@@ -1404,15 +1426,15 @@ public class HTMLReportGenerator {
                 }
                 oldSignature = memberDiff.oldSignature_;
             }
-            if (oldDocPrefix != null) 
-                memberDiff.documentationChange_ += "<A HREF=\"" + 
-                    oldMemberRef + ".html#" + memberName + "(" + 
-                    oldSignature + ")\" target=\"_self\"><tt>old</tt></A> to ";
+            if (oldDocPrefix != null)
+                memberDiff.documentationChange_ += "<A HREF=\"" +
+                        oldMemberRef + ".html#" + memberName + "(" +
+                        oldSignature + ")\" target=\"_self\"><tt>old</tt></A> to ";
             else
                 memberDiff.documentationChange_ += "<tt>old</tt> to ";
-            memberDiff.documentationChange_ += "<A HREF=\"" + memberRef + 
-                ".html#" + memberName + "(" + newSignature + 
-                ")\" target=\"_self\"><tt>new</tt></A>.<br>";
+            memberDiff.documentationChange_ += "<A HREF=\"" + memberRef +
+                    ".html#" + memberName + "(" + newSignature +
+                    ")\" target=\"_self\"><tt>new</tt></A>.<br>";
         }
 
         emitChanges(memberDiff, 1);
@@ -1421,22 +1443,22 @@ public class HTMLReportGenerator {
             int parentIdx = memberDiff.modifiersChange_.indexOf("now inherited from");
             if (parentIdx != -1) {
                 // Change the commentID to pick up the appropriate method
-                commentID = memberDiff.inheritedFrom_ + "." + memberName + 
-                    "_changed(" + newSignature + ")";
+                commentID = memberDiff.inheritedFrom_ + "." + memberName +
+                        "_changed(" + newSignature + ")";
             }
         }
         emitComment(commentID, null, 2);
-        
+
         reportFile.println("</TR>");
     }
 
-    /** 
-     * Write a table entry for a field. 
-     *
+    /**
+     * Write a table entry for a field.
+     * <p>
      * linkType: 0 - no link by default, 1 = link to Javadoc HTML file
      */
-    public void writeFieldTableEntry(String pkgName, String className, 
-                                     FieldAPI fieldAPI, int linkType, 
+    public void writeFieldTableEntry(String pkgName, String className,
+                                     FieldAPI fieldAPI, int linkType,
                                      String possibleComment, boolean useOld) {
         String fqName = pkgName + "." + className;
         // Fields can only appear in one table, so no need to specify _added etc
@@ -1460,9 +1482,9 @@ public class HTMLReportGenerator {
                 emitType(shortFieldType);
                 reportFile.println("&nbsp;" + fieldName);
             } else {
-                writeFieldTableEntry(pkgName, className, 
-                                     fieldAPI, 1, 
-                                     possibleComment, true);
+                writeFieldTableEntry(pkgName, className,
+                        fieldAPI, 1,
+                        possibleComment, true);
             }
         } else if (linkType == 1) {
             // Link to HTML file for the package.
@@ -1484,19 +1506,19 @@ public class HTMLReportGenerator {
             reportFile.print("  <nobr>");
             emitType(shortFieldType);
             reportFile.println("&nbsp;<A HREF=\"" + memberRef + ".html#" + fieldName +
-               "\" target=\"_top\"><tt>" + fieldName + "</tt></A></nobr>");
+                    "\" target=\"_top\"><tt>" + fieldName + "</tt></A></nobr>");
         }
         if (!useOld) {
             reportFile.println("  </TD>");
             emitComment(commentID, possibleComment, linkType);
             reportFile.println("</TR>");
         }
-        }
+    }
 
-    /** 
+    /**
      * Write a table entry for a changed field.
      */
-    public void writeFieldChangedTableEntry(String pkgName, String className, 
+    public void writeFieldChangedTableEntry(String pkgName, String className,
                                             MemberDiff memberDiff) {
         String memberName = memberDiff.name_;
         // Generally nowhere to break a member name anyway
@@ -1508,7 +1530,7 @@ public class HTMLReportGenerator {
 
         reportFile.println("  <TD VALIGN=\"TOP\" WIDTH=\"25%\">");
         reportFile.println("  <A NAME=\"" + commentID + "\"></A>"); // Named anchor
-        String memberRef = fqName.replace('.', '/');            
+        String memberRef = fqName.replace('.', '/');
         // Deal with inner classes
         if (className.indexOf('.') != -1) {
             memberRef = pkgName + ".";
@@ -1521,23 +1543,23 @@ public class HTMLReportGenerator {
         // inherited from other classes, so link to the defining class' field.
         // Only copes with non-inner classes.
         if (className.indexOf('.') == -1 &&
-            memberDiff.modifiersChange_ != null &&
-            memberDiff.modifiersChange_.indexOf("but is now inherited from") != -1) {
+                memberDiff.modifiersChange_ != null &&
+                memberDiff.modifiersChange_.indexOf("but is now inherited from") != -1) {
             memberRef = memberDiff.inheritedFrom_;
-            memberRef = memberRef.replace('.', '/'); 
+            memberRef = memberRef.replace('.', '/');
             memberRef = newDocPrefix + memberRef;
         }
 
         String newType = memberDiff.newType_;
-        String shortNewType = simpleName(newType); 
+        String shortNewType = simpleName(newType);
         reportFile.print("  <nobr>");
         emitTypeWithNoParens(shortNewType);
-        reportFile.print("&nbsp;<A HREF=\"" + memberRef + ".html#" + 
-                         memberName + "\" target=\"_top\"><tt>");
+        reportFile.print("&nbsp;<A HREF=\"" + memberRef + ".html#" +
+                memberName + "\" target=\"_top\"><tt>");
         reportFile.print(memberName);
         reportFile.print("</tt></A></nobr>");
         reportFile.println("  </TD>");
-        
+
         // Report changes in documentation
         if (reportDocChanges && memberDiff.documentationChange_ != null) {
             String oldMemberRef = null;
@@ -1552,13 +1574,13 @@ public class HTMLReportGenerator {
                     oldMemberRef = oldDocPrefix + oldMemberRef;
                 }
             }
-            if (oldDocPrefix != null) 
-                memberDiff.documentationChange_ += "<A HREF=\"" + 
-                    oldMemberRef + ".html#" + memberName + "\" target=\"_self\"><tt>old</tt></A> to ";
+            if (oldDocPrefix != null)
+                memberDiff.documentationChange_ += "<A HREF=\"" +
+                        oldMemberRef + ".html#" + memberName + "\" target=\"_self\"><tt>old</tt></A> to ";
             else
                 memberDiff.documentationChange_ += "<tt>old</tt> to ";
-            memberDiff.documentationChange_ += "<A HREF=\"" + memberRef + 
-                ".html#" + memberName + "\" target=\"_self\"><tt>new</tt></A>.<br>";
+            memberDiff.documentationChange_ += "<A HREF=\"" + memberRef +
+                    ".html#" + memberName + "\" target=\"_self\"><tt>new</tt></A>.<br>";
         }
 
         emitChanges(memberDiff, 2);
@@ -1571,7 +1593,7 @@ public class HTMLReportGenerator {
             }
         }
         emitComment(commentID, null, 2);
-        
+
         reportFile.println("</TR>");
     }
 
@@ -1580,7 +1602,7 @@ public class HTMLReportGenerator {
      *
      * @param memberType 0 = ctor, 1 = method, 2 = field
      */
-    public void emitChanges(MemberDiff memberDiff, int memberType){
+    public void emitChanges(MemberDiff memberDiff, int memberType) {
         reportFile.println("  <TD VALIGN=\"TOP\" WIDTH=\"30%\">");
         boolean hasContent = false;
         // The type or return type changed
@@ -1605,9 +1627,9 @@ public class HTMLReportGenerator {
         }
         // The signatures changed - only used by methods
         if (memberType == 1 &&
-            memberDiff.oldSignature_ != null && 
-            memberDiff.newSignature_ != null && 
-            memberDiff.oldSignature_.compareTo(memberDiff.newSignature_) != 0) {
+                memberDiff.oldSignature_ != null &&
+                memberDiff.newSignature_ != null &&
+                memberDiff.oldSignature_.compareTo(memberDiff.newSignature_) != 0) {
             String shortOldSignature = simpleName(memberDiff.oldSignature_);
             String shortNewSignature = simpleName(memberDiff.newSignature_);
             if (shortOldSignature.compareTo(shortNewSignature) == 0) {
@@ -1616,7 +1638,7 @@ public class HTMLReportGenerator {
                 shortNewSignature = memberDiff.newSignature_;
             }
             if (hasContent)
-                reportFile.print(" "); 
+                reportFile.print(" ");
             reportFile.print("Change in signature from ");
             if (shortOldSignature.compareTo("") == 0)
                 shortOldSignature = "void";
@@ -1630,11 +1652,11 @@ public class HTMLReportGenerator {
         }
         // The exceptions are only non-null in methods and constructors
         if (memberType != 2 &&
-            memberDiff.oldExceptions_ != null && 
-            memberDiff.newExceptions_ != null && 
-            memberDiff.oldExceptions_.compareTo(memberDiff.newExceptions_) != 0) {
+                memberDiff.oldExceptions_ != null &&
+                memberDiff.newExceptions_ != null &&
+                memberDiff.oldExceptions_.compareTo(memberDiff.newExceptions_) != 0) {
             if (hasContent)
-                reportFile.print(" "); 
+                reportFile.print(" ");
             // If either one of the exceptions has no spaces in it, or is 
             // equal to "no exceptions", then just display the whole 
             // exceptions texts.
@@ -1646,9 +1668,9 @@ public class HTMLReportGenerator {
                 spaceInNew = -1;
             if (spaceInOld == -1 || spaceInNew == -1) {
                 reportFile.print("Change in exceptions thrown from ");
-                emitException(memberDiff.oldExceptions_); 
-                reportFile.print(" to " );
-                emitException(memberDiff.newExceptions_); 
+                emitException(memberDiff.oldExceptions_);
+                reportFile.print(" to ");
+                emitException(memberDiff.newExceptions_);
                 reportFile.println(".<br>");
             } else {
                 // Too many exceptions become unreadable, so just show the 
@@ -1660,7 +1682,7 @@ public class HTMLReportGenerator {
                 while (stOld.hasMoreTokens()) {
                     String oldException = stOld.nextToken();
                     if (!memberDiff.newExceptions_.startsWith(oldException) &&
-                        !(memberDiff.newExceptions_.indexOf(", " + oldException) != -1)) {
+                            !(memberDiff.newExceptions_.indexOf(", " + oldException) != -1)) {
                         if (firstChange) {
                             reportFile.print("Change in exceptions: ");
                             firstChange = false;
@@ -1675,19 +1697,19 @@ public class HTMLReportGenerator {
                     reportFile.print(" was removed.");
                 else if (numRemoved > 1)
                     reportFile.print(" were removed.");
-                
+
                 int numAdded = 0;
                 StringTokenizer stNew = new StringTokenizer(memberDiff.newExceptions_, ", ");
                 while (stNew.hasMoreTokens()) {
                     String newException = stNew.nextToken();
                     if (!memberDiff.oldExceptions_.startsWith(newException) &&
-                        !(memberDiff.oldExceptions_.indexOf(", " + newException) != -1)) {
+                            !(memberDiff.oldExceptions_.indexOf(", " + newException) != -1)) {
                         if (firstChange) {
                             reportFile.print("Change in exceptions: ");
                             firstChange = false;
                         }
                         if (numAdded != 0)
-                            reportFile.println(", ");    
+                            reportFile.println(", ");
                         else
                             reportFile.println(" ");
                         emitException(newException);
@@ -1708,26 +1730,26 @@ public class HTMLReportGenerator {
 
         if (memberDiff.documentationChange_ != null) {
             if (hasContent)
-                reportFile.print(" "); 
+                reportFile.print(" ");
             reportFile.print(memberDiff.documentationChange_);
             hasContent = true;
         }
-            
+
         // Last, so no need for a <br>
         if (memberDiff.modifiersChange_ != null) {
             if (hasContent)
-                reportFile.print(" "); 
+                reportFile.print(" ");
             reportFile.println(memberDiff.modifiersChange_);
             hasContent = true;
         }
         reportFile.println("  </TD>");
     }
 
-    /** 
-     * Emit a string which is an exception by surrounding it with 
+    /**
+     * Emit a string which is an exception by surrounding it with
      * &lt;code&gt; tags.
      * If there is a space in the type, e.g. &quot;String, File&quot;, then
-     * surround it with parentheses too. Do not add &lt;code&gt; tags or 
+     * surround it with parentheses too. Do not add &lt;code&gt; tags or
      * parentheses if the String is "no exceptions".
      */
     public void emitException(String ex) {
@@ -1742,7 +1764,7 @@ public class HTMLReportGenerator {
         }
     }
 
-    /** 
+    /**
      * Emit a string which is a type by surrounding it with &lt;code&gt; tags.
      * If there is a space in the type, e.g. &quot;String, File&quot;, then
      * surround it with parentheses too.
@@ -1757,20 +1779,20 @@ public class HTMLReportGenerator {
         }
     }
 
-    /** 
+    /**
      * Emit a string which is a type by surrounding it with &lt;code&gt; tags.
-     * Also surround it with parentheses too. Used to display methods' 
+     * Also surround it with parentheses too. Used to display methods'
      * parameters.
-     * Suggestions for where a browser should break the 
+     * Suggestions for where a browser should break the
      * text are provided with &lt;br> and &ltnobr> tags.
      */
     public static void emitTypeWithParens(String type) {
         emitTypeWithParens(type, true);
     }
 
-    /** 
+    /**
      * Emit a string which is a type by surrounding it with &lt;code&gt; tags.
-     * Also surround it with parentheses too. Used to display methods' 
+     * Also surround it with parentheses too. Used to display methods'
      * parameters.
      */
     public static void emitTypeWithParens(String type, boolean addBreaks) {
@@ -1789,14 +1811,14 @@ public class HTMLReportGenerator {
                     if (sepType == null)
                         sepType = p;
                     else
-                        sepType += ",</nobr> " + p + "<nobr>";                        
+                        sepType += ",</nobr> " + p + "<nobr>";
                 }
                 reportFile.print("(<code>" + sepType + "<nobr></code>)");
             }
         }
     }
 
-    /** 
+    /**
      * Emit a string which is a type by surrounding it with &lt;code&gt; tags.
      * Do not surround it with parentheses. Used to display methods' return
      * types and field types.
@@ -1806,12 +1828,12 @@ public class HTMLReportGenerator {
             reportFile.print("<code>" + type + "</code>");
     }
 
-    /** 
+    /**
      * Return a String with the simple names of the classes in fqName.
-     * &quot;java.lang.String&quot; becomes &quot;String&quot;, 
+     * &quot;java.lang.String&quot; becomes &quot;String&quot;,
      * &quotjava.lang.String, java.io.File&quot becomes &quotString, File&quot;
-     * and so on. If fqName is null, return null. If fqName is &quot;&quot;, 
-     * return &quot;&quot;. 
+     * and so on. If fqName is null, return null. If fqName is &quot;&quot;,
+     * return &quot;&quot;.
      */
     public static String simpleName(String fqNames) {
         if (fqNames == null)
@@ -1823,61 +1845,61 @@ public class HTMLReportGenerator {
         ArrayList<String> fqNamesList = new ArrayList<String>();
         int genericParametersDepth = 0;
         StringBuffer buffer = new StringBuffer();
-        for (int i=0; i<fqNames.length(); i++) {
-          char c = fqNames.charAt(i);
-          if ('<' == c) {
-            genericParametersDepth++;
-          }
-          if ('>' == c) {
-            genericParametersDepth--;
-          }
-          if (',' != c || genericParametersDepth > 0) {
-            buffer.append(c);
-          } else if (',' == c) {
-            fqNamesList.add(buffer.toString().trim());
-            buffer = new StringBuffer(buffer.length());
-          }
+        for (int i = 0; i < fqNames.length(); i++) {
+            char c = fqNames.charAt(i);
+            if ('<' == c) {
+                genericParametersDepth++;
+            }
+            if ('>' == c) {
+                genericParametersDepth--;
+            }
+            if (',' != c || genericParametersDepth > 0) {
+                buffer.append(c);
+            } else if (',' == c) {
+                fqNamesList.add(buffer.toString().trim());
+                buffer = new StringBuffer(buffer.length());
+            }
         }
         fqNamesList.add(buffer.toString().trim());
         for (String fqName : fqNamesList) {
             // Assume this will be used inside a <nobr> </nobr> set of tags.
             if (hasContent)
-                res += ", "; 
+                res += ", ";
             hasContent = true;
             // Look for text within '<' and '>' in case this is a invocation of a generic
-            
+
             int firstBracket = fqName.indexOf('<');
             int lastBracket = fqName.lastIndexOf('>');
             String genericParameter = null;
             if (firstBracket != -1 && lastBracket != -1) {
-              genericParameter = simpleName(fqName.substring(firstBracket + 1, lastBracket));
-              fqName = fqName.substring(0, firstBracket);              
+                genericParameter = simpleName(fqName.substring(firstBracket + 1, lastBracket));
+                fqName = fqName.substring(0, firstBracket);
             }
-            
+
             int lastDot = fqName.lastIndexOf('.');
             if (lastDot < 0) {
                 res += fqName; // Already as simple as possible
             } else {
-                res += fqName.substring(lastDot+1);
+                res += fqName.substring(lastDot + 1);
             }
             if (genericParameter != null)
-              res += "&lt;" + genericParameter + "&gt;";            
+                res += "&lt;" + genericParameter + "&gt;";
         }
         return res;
     }
 
-    /** 
+    /**
      * Find any existing comment and emit it. Add the new comment to the
-     * list of new comments. The first instance of the string "@first" in 
-     * a hand-written comment will be replaced by the first sentence from 
+     * list of new comments. The first instance of the string "@first" in
+     * a hand-written comment will be replaced by the first sentence from
      * the associated doc block, if such exists. Also replace @link by
      * an HTML link.
      *
-     * @param commentID The identifier for this comment.
+     * @param commentID       The identifier for this comment.
      * @param possibleComment A possible comment from another source.
-     * @param linkType 0 = remove, 1 = add, 2 = change
+     * @param linkType        0 = remove, 1 = add, 2 = change
      */
-    public void emitComment(String commentID, String possibleComment, 
+    public void emitComment(String commentID, String possibleComment,
                             int linkType) {
         if (noCommentsOnRemovals && linkType == 0) {
             reportFile.println("  <TD>&nbsp;</TD>");
@@ -1895,19 +1917,19 @@ public class HTMLReportGenerator {
         // We have to use this global hash table because the *Diff classes
         // do not store the possible comment from the new *API object.
         if (!noCommentsOnChanges && possibleComment == null) {
-            possibleComment = (String)Comments.allPossibleComments.get(commentID);
+            possibleComment = Comments.allPossibleComments.get(commentID);
         }
         // Just use the first sentence of the possible comment.
         if (possibleComment != null) {
             int fsidx = RootDocToXML.endOfFirstSentence(possibleComment, false);
             if (fsidx != -1 && fsidx != 0)
-                possibleComment = possibleComment.substring(0, fsidx+1);
+                possibleComment = possibleComment.substring(0, fsidx + 1);
         }
 
         String comment = Comments.getComment(existingComments_, commentID);
         if (comment.compareTo(Comments.placeHolderText) == 0) {
-            if (possibleComment != null && 
-                possibleComment.indexOf("InsertOtherCommentsHere") == -1)
+            if (possibleComment != null &&
+                    possibleComment.indexOf("InsertOtherCommentsHere") == -1)
                 reportFile.println("  <TD VALIGN=\"TOP\">" + possibleComment + "</TD>");
             else
                 reportFile.println("  <TD>&nbsp;</TD>");
@@ -1917,8 +1939,8 @@ public class HTMLReportGenerator {
                 reportFile.println("  <TD VALIGN=\"TOP\">" + Comments.convertAtLinks(comment, "", null, null) + "</TD>");
             } else {
                 reportFile.print("  <TD VALIGN=\"TOP\">" + comment.substring(0, idx));
-                if (possibleComment != null && 
-                    possibleComment.indexOf("InsertOtherCommentsHere") == -1)
+                if (possibleComment != null &&
+                        possibleComment.indexOf("InsertOtherCommentsHere") == -1)
                     reportFile.print(possibleComment);
                 reportFile.println(comment.substring(idx + 6) + "</TD>");
             }
@@ -1926,126 +1948,140 @@ public class HTMLReportGenerator {
         SingleComment newComment = new SingleComment(commentID, comment);
         newComments_.addComment(newComment);
     }
-    
-    /** Write the end of a table. */
+
+    /**
+     * Write the end of a table.
+     */
     public void writeTableEnd() {
         reportFile.println("</TABLE>");
         reportFile.println("&nbsp;");
-    } 
+    }
 
-    /** Write a newline out. */
+    /**
+     * Write a newline out.
+     */
     public void writeText() {
         reportFile.println();
-    } 
+    }
 
-    /** Write some text out. */
+    /**
+     * Write some text out.
+     */
     public void writeText(String text) {
         reportFile.println(text);
-    } 
+    }
 
-    /** Emit some non-breaking space for indentation. */
+    /**
+     * Emit some non-breaking space for indentation.
+     */
     public void indent(int indent) {
         for (int i = 0; i < indent; i++)
             reportFile.print("&nbsp;");
-    } 
+    }
 
-    /** 
-     * The name of the file to which the top-level HTML file is written, 
+    /**
+     * The name of the file to which the top-level HTML file is written,
      * and also the name of the subdirectory where most of the HTML appears,
-     * and also a prefix for the names of some of the files in that 
+     * and also a prefix for the names of some of the files in that
      * subdirectory.
      */
     static String reportFileName = "changes";
-    
-    /** 
-     * The suffix of the file to which the HTML output is currently being 
-     * written. 
+
+    /**
+     * The suffix of the file to which the HTML output is currently being
+     * written.
      */
     static String reportFileExt = ".html";
-    
-    /** 
-     * The file to which the HTML output is currently being written. 
+
+    /**
+     * The file to which the HTML output is currently being written.
      */
     static PrintWriter reportFile = null;
 
-    /** 
+    /**
      * The object which represents the top of the tree of differences
      * between two APIs. It is only used indirectly when emitting a
      * navigation bar.
      */
     static APIDiff apiDiff = null;
 
-    /** 
-     * If set, then do not suggest comments for removals from the first 
-     * sentence of the doc block of the old API. 
+    /**
+     * If set, then do not suggest comments for removals from the first
+     * sentence of the doc block of the old API.
      */
     public static boolean noCommentsOnRemovals = false;
 
-    /** 
-     * If set, then do not suggest comments for additions from the first 
-     * sentence of the doc block of the new API. 
+    /**
+     * If set, then do not suggest comments for additions from the first
+     * sentence of the doc block of the new API.
      */
     public static boolean noCommentsOnAdditions = false;
 
-    /** 
-     * If set, then do not suggest comments for changes from the first 
-     * sentence of the doc block of the new API. 
+    /**
+     * If set, then do not suggest comments for changes from the first
+     * sentence of the doc block of the new API.
      */
     public static boolean noCommentsOnChanges = false;
 
-    /** 
-     * If set, then report changes in documentation (Javadoc comments) 
+    /**
+     * If set, then report changes in documentation (Javadoc comments)
      * between the old and the new API. The default is that this is not set.
      */
     public static boolean reportDocChanges = false;
 
-    /** 
+    /**
      * If set, then only report incompatible changes
      * between the old and the new API. The default is that this is not set.
      */
     public static boolean incompatibleChangesOnly = false;
 
-    /** 
+    /**
      * Define the prefix for HTML links to the existing set of Javadoc-
      * generated documentation for the new API. E.g. For J2SE1.3.x, use
      * "http://java.sun.com/j2se/1.3/docs/api/"
      */
     public static String newDocPrefix = "../";
 
-    /** 
+    /**
      * Define the prefix for HTML links to the existing set of Javadoc-
      * generated documentation for the old API.
      */
     public static String oldDocPrefix = null;
 
-    /** To generate statistical output, set this to true. */
+    /**
+     * To generate statistical output, set this to true.
+     */
     public static boolean doStats = false;
 
-    /** 
+    /**
      * The destination directory for output files.
      */
     public static String outputDir = null;
 
-    /** 
-     * The title used on the first page of the report. By default, this is 
-     * &quot;API Differences Between &lt;name of old API&gt; and 
+    /**
+     * The title used on the first page of the report. By default, this is
+     * &quot;API Differences Between &lt;name of old API&gt; and
      * &lt;name of new API&gt;&quot;. It can be
      * set by using the -doctitle option.
      */
     public static String docTitle = null;
 
-    /** 
-     * The browser window title for the report. By default, this is 
-     * &quot;API Differences Between &lt;name of old API&gt; and 
+    /**
+     * The browser window title for the report. By default, this is
+     * &quot;API Differences Between &lt;name of old API&gt; and
      * &lt;name of new API&gt;&quot;. It can be
      * set by using the -windowtitle option.
      */
     public static String windowTitle = null;
 
-    /** The desired background color for JDiff tables. */
+    /**
+     * The desired background color for JDiff tables.
+     */
     static final String bgcolor = "#FFFFFF";
 
-    /** Set to enable debugging output. */
+    /**
+     * Set to enable debugging output.
+     */
     private static final boolean trace = false;
 
 }

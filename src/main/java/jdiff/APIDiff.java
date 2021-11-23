@@ -1,7 +1,6 @@
 package jdiff;
 
 import java.util.*;
-import com.sun.javadoc.*;
 
 /**
  * The class contains the changes between two API objects; packages added,
@@ -14,11 +13,11 @@ import com.sun.javadoc.*;
 public class APIDiff {
 
     /** Packages added in the new API. */
-    public List packagesAdded = null; // PackageAPI[]
+    public List<PackageAPI> packagesAdded = null; // PackageAPI[]
     /** Packages removed in the new API. */
-    public List packagesRemoved = null; // PackageAPI[]
+    public List<PackageAPI> packagesRemoved = null; // PackageAPI[]
     /** Packages changed in the new API. */
-    public List packagesChanged = null; // PackageDiff[]
+    public List<PackageDiff> packagesChanged = null; // PackageDiff[]
 
     /** Name of the old API. */
     public static String oldAPIName_;
@@ -32,9 +31,9 @@ public class APIDiff {
     public APIDiff() {
         oldAPIName_ = null;
         newAPIName_ = null;
-        packagesAdded = new ArrayList(); // PackageAPI[]
-        packagesRemoved = new ArrayList(); // PackageAPI[]
-        packagesChanged = new ArrayList(); // PackageDiff[]
+        packagesAdded = new ArrayList<>(); // PackageAPI[]
+        packagesRemoved = new ArrayList<>(); // PackageAPI[]
+        packagesChanged = new ArrayList<>(); // PackageDiff[]
     }   
 }
 

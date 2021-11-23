@@ -1,45 +1,47 @@
 package jdiff;
 
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.XMLReader;
+import org.xml.sax.helpers.DefaultHandler;
+
 import java.io.*;
 import java.util.*;
 
-/* For SAX XML parsing */
-import org.xml.sax.Attributes;
-import org.xml.sax.SAXException;
-import org.xml.sax.SAXParseException;
-import org.xml.sax.XMLReader;
-import org.xml.sax.InputSource;
-import org.xml.sax.helpers.*;
-
 /**
- * Creates a Comments from an XML file. The Comments object is the internal 
+ * Creates a Comments from an XML file. The Comments object is the internal
  * representation of the comments for the changes.
  * All methods in this class for populating a Comments object are static.
- * 
+ * <p>
  * See the file LICENSE.txt for copyright details.
+ *
  * @author Matthew Doar, mdoar@pobox.com
  */
 public class Comments {
 
-    /** 
+    /**
      * All the possible comments known about, accessible by the commentID.
      */
-    public static Hashtable allPossibleComments = new Hashtable();
+    public static Hashtable<String, String> allPossibleComments = new Hashtable<String, String>();
 
-    /** The old Comments object which is populated from the file read in. */ 
+    /**
+     * The old Comments object which is populated from the file read in.
+     */
     private static Comments oldComments_ = null;
 
-    /** Default constructor. */
+    /**
+     * Default constructor.
+     */
     public Comments() {
-        commentsList_ = new ArrayList(); // SingleComment[]
-    }   
-  
-    // The list of comments elements associated with this objects
-    public List commentsList_ = null; // SingleComment[]
+        commentsList_ = new ArrayList<>(); // SingleComment[]
+    }
 
-    /** 
+    // The list of comments elements associated with this objects
+    public List<SingleComment> commentsList_ = null; // SingleComment[]
+
+    /**
      * Read the file where the XML for comments about the changes between
-     * the old API and new API is stored and create a Comments object for 
+     * the old API and new API is stored and create a Comments object for
      * it. The Comments object may be null if no file exists.
      */
     public static Comments readFile(String filename) {
@@ -82,19 +84,19 @@ public class Comments {
             parser.setContentHandler(handler);
             parser.setErrorHandler(handler);
             parser.parse(new InputSource(new FileInputStream(new File(filename))));
-        } catch(org.xml.sax.SAXNotRecognizedException snre) {
+        } catch (org.xml.sax.SAXNotRecognizedException snre) {
             System.out.println("SAX Parser does not recognize feature: " + snre);
             snre.printStackTrace();
             System.exit(1);
-        } catch(org.xml.sax.SAXNotSupportedException snse) {
+        } catch (org.xml.sax.SAXNotSupportedException snse) {
             System.out.println("SAX Parser feature is not supported: " + snse);
             snse.printStackTrace();
             System.exit(1);
-        } catch(org.xml.sax.SAXException saxe) {
+        } catch (org.xml.sax.SAXException saxe) {
             System.out.println("SAX Exception parsing file '" + filename + "' : " + saxe);
             saxe.printStackTrace();
             System.exit(1);
-        } catch(java.io.IOException ioe) {
+        } catch (java.io.IOException ioe) {
             System.out.println("IOException parsing file '" + filename + "' : " + ioe);
             ioe.printStackTrace();
             System.exit(1);
@@ -114,12 +116,12 @@ public class Comments {
         if (idx == -1 && idx2 == -1) {
             xsdFileName = "";
         } else if (idx == -1 && idx2 != -1) {
-            xsdFileName = xsdFileName.substring(0, idx2+1);
-        } else if (idx != -1  && idx2 == -1) {
-            xsdFileName = xsdFileName.substring(0, idx+1);
-        } else if (idx != -1  && idx2 != -1) {
+            xsdFileName = xsdFileName.substring(0, idx2 + 1);
+        } else if (idx != -1 && idx2 == -1) {
+            xsdFileName = xsdFileName.substring(0, idx + 1);
+        } else if (idx != -1 && idx2 != -1) {
             int max = idx2 > idx ? idx2 : idx;
-            xsdFileName = xsdFileName.substring(0, max+1);
+            xsdFileName = xsdFileName.substring(0, max + 1);
         }
         xsdFileName += "comments.xsd";
         try {
@@ -158,9 +160,9 @@ public class Comments {
             xsdFile.println();
             xsdFile.println("</xsd:schema>");
             xsdFile.close();
-        } catch(IOException e) {
+        } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + xsdFileName);
-            System.out.println("Error: " +  e.getMessage());
+            System.out.println("Error: " + e.getMessage());
             System.exit(1);
         }
     }
@@ -171,24 +173,24 @@ public class Comments {
 //
 
     /**
-     * Add the SingleComment object to the list of comments kept by this 
-     * object. 
+     * Add the SingleComment object to the list of comments kept by this
+     * object.
      */
     public void addComment(SingleComment comment) {
-        commentsList_.add(comment); 
+        commentsList_.add(comment);
     }
 
 //
 // Methods to get data from a Comments object. Called by the report generator
 //
 
-    /** 
+    /**
      * The text placed into XML comments file where there is no comment yet.
      * It never appears in reports.
      */
     public static final String placeHolderText = "InsertCommentsHere";
-    
-    /** 
+
+    /**
      * Return the comment associated with the given id in the Comment object.
      * If there is no such comment, return the placeHolderText.
      */
@@ -206,24 +208,24 @@ public class Comments {
             if (numIdx != 1) {
                 System.out.println("Warning: " + numIdx + " identical ids in the existing comments file. Using the first instance.");
             }
-            SingleComment singleComment = (SingleComment)(comments.commentsList_.get(idx));
+            SingleComment singleComment = comments.commentsList_.get(idx);
             // Convert @link tags to links
             return singleComment.text_;
         }
     }
 
-    /** 
-     * Convert @link tags to HTML links. 
+    /**
+     * Convert @link tags to HTML links.
      */
-    public static String convertAtLinks(String text, String currentElement, 
+    public static String convertAtLinks(String text, String currentElement,
                                         PackageAPI pkg, ClassAPI cls) {
         if (text == null)
             return null;
-	
+
         StringBuffer result = new StringBuffer();
-        
+
         int state = -1;
-        
+
         final int NORMAL_TEXT = -1;
         final int IN_LINK = 1;
         final int IN_LINK_IDENTIFIER = 2;
@@ -235,133 +237,133 @@ public class Comments {
         StringBuffer identifier = null;
         StringBuffer identifierReference = null;
         StringBuffer linkText = null;
-        
+
         // Figure out relative reference if required.
         String ref = "";
         if (currentElement.compareTo("class") == 0 ||
-            currentElement.compareTo("interface") == 0) {
-	    ref = pkg.name_ + "." + cls.name_ + ".";
+                currentElement.compareTo("interface") == 0) {
+            ref = pkg.name_ + "." + cls.name_ + ".";
         } else if (currentElement.compareTo("package") == 0) {
-	    ref = pkg.name_ + ".";
+            ref = pkg.name_ + ".";
         }
-        ref = ref.replace('.', '/');        
-        
-        for (int i=0; i < text.length(); i++) {
-	    char c = text.charAt(i);
-	    char nextChar = i < text.length()-1 ? text.charAt(i+1) : (char)-1;
-	    int remainingChars = text.length() - i;
-          
-	    switch (state) {
-	    case NORMAL_TEXT:
-		if (c == '{' && remainingChars >= 6) {
-		    if ("{@link".equals(text.substring(i, i + 6))) {
-			state = IN_LINK;
-			identifier = null;
-			identifierReference = null;
-			linkText = null;
-			i += 5;
-			continue;
-		    }
-		}
-		result.append(c);
-		break;
-	    case IN_LINK:
-		if (Character.isWhitespace(nextChar)) continue;
-		if (nextChar == '}') {
-		    // End of the link
-		    state = END_OF_LINK;
-		} else if (!Character.isWhitespace(nextChar)) {
-		    state = IN_LINK_IDENTIFIER;
-		}
-		break;
-            case IN_LINK_IDENTIFIER:
-		if (identifier == null) {
-		    identifier = new StringBuffer();
-		}
-            
-		if (c == '#') {
-		    // We have a reference.
-		    state = IN_LINK_IDENTIFIER_REFERENCE;
-		    // Don't append #
-		    continue;
-		} else if (Character.isWhitespace(c)) {
-		    // We hit some whitespace: the next character is the beginning
-		    // of the link text.
-		    state = IN_LINK_LINKTEXT;
-		    continue;
-		}
-		identifier.append(c);              
-		// Check for a } that ends the link.
-		if (nextChar == '}') {
-		    state = END_OF_LINK;
-		}
-		break;
-            case IN_LINK_IDENTIFIER_REFERENCE:
-		if (identifierReference == null) {
-		    identifierReference = new StringBuffer();
-		}
-		if (Character.isWhitespace(c)) {
-		    state = IN_LINK_LINKTEXT;
-		    continue;
-		}
-		identifierReference.append(c);
-              
-		if (c == '(') {
-		    state = IN_LINK_IDENTIFIER_REFERENCE_PARAMS;
-		}
-              
-		if (nextChar == '}') {
-		    state = END_OF_LINK;
-		}
-		break;
-            case IN_LINK_IDENTIFIER_REFERENCE_PARAMS:
-		// We're inside the parameters of a reference. Spaces are allowed.
-		if (c == ')') {
-		    state = IN_LINK_IDENTIFIER_REFERENCE;
-		}
-		identifierReference.append(c);
-		if (nextChar == '}') {
-		    state = END_OF_LINK;
-		}
-		break;
-            case IN_LINK_LINKTEXT:
-		if (linkText == null) linkText = new StringBuffer();
-              
-		linkText.append(c);
-              
-		if (nextChar == '}') {
-		    state = END_OF_LINK;
-		}
-		break;
-            case END_OF_LINK:
-		if (identifier != null) {
-		    result.append("<A HREF=\"");
-		    result.append(HTMLReportGenerator.newDocPrefix);
-		    result.append(ref);
-		    result.append(identifier.toString().replace('.', '/'));
-		    result.append(".html");
-		    if (identifierReference != null) {
-			result.append("#");
-			result.append(identifierReference);
-		    }
-		    result.append("\">");   // target=_top?
-                
-		    result.append("<TT>");
-		    if (linkText != null) {
-			result.append(linkText);
-		    } else {
-			result.append(identifier);
-			if (identifierReference != null) {
-			    result.append(".");
-			    result.append(identifierReference);
-			}
-		    }
-		    result.append("</TT>");
-		    result.append("</A>");
-		}
-		state = NORMAL_TEXT;
-		break;
-	    }
+        ref = ref.replace('.', '/');
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            char nextChar = i < text.length() - 1 ? text.charAt(i + 1) : (char) -1;
+            int remainingChars = text.length() - i;
+
+            switch (state) {
+                case NORMAL_TEXT:
+                    if (c == '{' && remainingChars >= 6) {
+                        if ("{@link".equals(text.substring(i, i + 6))) {
+                            state = IN_LINK;
+                            identifier = null;
+                            identifierReference = null;
+                            linkText = null;
+                            i += 5;
+                            continue;
+                        }
+                    }
+                    result.append(c);
+                    break;
+                case IN_LINK:
+                    if (Character.isWhitespace(nextChar)) continue;
+                    if (nextChar == '}') {
+                        // End of the link
+                        state = END_OF_LINK;
+                    } else if (!Character.isWhitespace(nextChar)) {
+                        state = IN_LINK_IDENTIFIER;
+                    }
+                    break;
+                case IN_LINK_IDENTIFIER:
+                    if (identifier == null) {
+                        identifier = new StringBuffer();
+                    }
+
+                    if (c == '#') {
+                        // We have a reference.
+                        state = IN_LINK_IDENTIFIER_REFERENCE;
+                        // Don't append #
+                        continue;
+                    } else if (Character.isWhitespace(c)) {
+                        // We hit some whitespace: the next character is the beginning
+                        // of the link text.
+                        state = IN_LINK_LINKTEXT;
+                        continue;
+                    }
+                    identifier.append(c);
+                    // Check for a } that ends the link.
+                    if (nextChar == '}') {
+                        state = END_OF_LINK;
+                    }
+                    break;
+                case IN_LINK_IDENTIFIER_REFERENCE:
+                    if (identifierReference == null) {
+                        identifierReference = new StringBuffer();
+                    }
+                    if (Character.isWhitespace(c)) {
+                        state = IN_LINK_LINKTEXT;
+                        continue;
+                    }
+                    identifierReference.append(c);
+
+                    if (c == '(') {
+                        state = IN_LINK_IDENTIFIER_REFERENCE_PARAMS;
+                    }
+
+                    if (nextChar == '}') {
+                        state = END_OF_LINK;
+                    }
+                    break;
+                case IN_LINK_IDENTIFIER_REFERENCE_PARAMS:
+                    // We're inside the parameters of a reference. Spaces are allowed.
+                    if (c == ')') {
+                        state = IN_LINK_IDENTIFIER_REFERENCE;
+                    }
+                    identifierReference.append(c);
+                    if (nextChar == '}') {
+                        state = END_OF_LINK;
+                    }
+                    break;
+                case IN_LINK_LINKTEXT:
+                    if (linkText == null) linkText = new StringBuffer();
+
+                    linkText.append(c);
+
+                    if (nextChar == '}') {
+                        state = END_OF_LINK;
+                    }
+                    break;
+                case END_OF_LINK:
+                    if (identifier != null) {
+                        result.append("<A HREF=\"");
+                        result.append(HTMLReportGenerator.newDocPrefix);
+                        result.append(ref);
+                        result.append(identifier.toString().replace('.', '/'));
+                        result.append(".html");
+                        if (identifierReference != null) {
+                            result.append("#");
+                            result.append(identifierReference);
+                        }
+                        result.append("\">");   // target=_top?
+
+                        result.append("<TT>");
+                        if (linkText != null) {
+                            result.append(linkText);
+                        } else {
+                            result.append(identifier);
+                            if (identifierReference != null) {
+                                result.append(".");
+                                result.append(identifierReference);
+                            }
+                        }
+                        result.append("</TT>");
+                        result.append("</A>");
+                    }
+                    state = NORMAL_TEXT;
+                    break;
+            }
         }
         return result.toString();
     }
@@ -374,11 +376,11 @@ public class Comments {
      * Write the XML representation of comments to a file.
      *
      * @param outputFileName The name of the comments file.
-     * @param oldComments The old comments on the changed APIs.
-     * @param newComments The new comments on the changed APIs.
+     * @param oldComments    The old comments on the changed APIs.
+     * @param newComments    The new comments on the changed APIs.
      * @return true if no problems encountered
      */
-    public static boolean writeFile(String outputFileName, 
+    public static boolean writeFile(String outputFileName,
                                     Comments newComments) {
         try {
             FileOutputStream fos = new FileOutputStream(outputFileName);
@@ -387,21 +389,21 @@ public class Comments {
             newComments.emitComments();
             newComments.emitXMLFooter();
             outputFile.close();
-        } catch(IOException e) {
+        } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + outputFileName);
-            System.out.println("Error: "+ e.getMessage());
+            System.out.println("Error: " + e.getMessage());
             System.exit(1);
         }
         return true;
     }
-    
+
     /**
      * Write the Comments object out in XML.
      */
     public void emitComments() {
-        Iterator iter = commentsList_.iterator();
+        Iterator<SingleComment> iter = commentsList_.iterator();
         while (iter.hasNext()) {
-            SingleComment currComment = (SingleComment)(iter.next());
+            SingleComment currComment = (iter.next());
             if (!currComment.isUsed_)
                 outputFile.println("<!-- This comment is no longer used ");
             outputFile.println("<comment>");
@@ -412,23 +414,23 @@ public class Comments {
             outputFile.println("</comment>");
             if (!currComment.isUsed_)
                 outputFile.println("-->");
-        }        
+        }
     }
 
-    /** 
+    /**
      * Dump the contents of a Comments object out for inspection.
      */
     public void dump() {
-        Iterator iter = commentsList_.iterator();
+        Iterator<SingleComment> iter = commentsList_.iterator();
         int i = 0;
         while (iter.hasNext()) {
             i++;
-            SingleComment currComment = (SingleComment)(iter.next());
+            SingleComment currComment = (iter.next());
             System.out.println("Comment " + i);
             System.out.println("id = " + currComment.id_);
             System.out.println("text = \"" + currComment.text_ + "\"");
             System.out.println("isUsed = " + currComment.isUsed_);
-        }        
+        }
     }
 
     /**
@@ -439,22 +441,22 @@ public class Comments {
             System.out.println("Note: all the comments have been newly generated");
             return;
         }
-        
+
         // See which comment ids are no longer used and add those entries to 
         // the new comments, marking them as unused.
-        Iterator iter = oldComments.commentsList_.iterator();
+        Iterator<SingleComment> iter = oldComments.commentsList_.iterator();
         while (iter.hasNext()) {
-            SingleComment oldComment = (SingleComment)(iter.next());
+            SingleComment oldComment = (iter.next());
             int idx = Collections.binarySearch(newComments.commentsList_, oldComment);
             if (idx < 0) {
                 System.out.println("Warning: comment \"" + oldComment.id_ + "\" is no longer used.");
                 oldComment.isUsed_ = false;
                 newComments.commentsList_.add(oldComment);
             }
-        }        
-        
+        }
+
     }
-    
+
     /**
      * Emit the XML header.
      */
@@ -468,7 +470,7 @@ public class Comments {
         String apiIdentifier = filename.substring(0, idx);
         // Also remove the output directory and directory separator if present
         if (HTMLReportGenerator.outputDir != null)
-            apiIdentifier = apiIdentifier.substring(HTMLReportGenerator.outputDir.length()+1);
+            apiIdentifier = apiIdentifier.substring(HTMLReportGenerator.outputDir.length() + 1);
         // Also remove "user_comments_for_"
         apiIdentifier = apiIdentifier.substring(18);
         outputFile.println("  name=\"" + apiIdentifier + "\"");
@@ -494,17 +496,17 @@ public class Comments {
         outputFile.println("</comments>");
     }
 
-    private static List oldAPIList = null;
-    private static List newAPIList = null;
+    private static final List oldAPIList = null;
+    private static final List newAPIList = null;
 
-    /** 
-     * Return true if the given HTML tag has no separate </tag> end element. 
-     *
+    /**
+     * Return true if the given HTML tag has no separate </tag> end element.
+     * <p>
      * If you want to be able to use sloppy HTML in your comments, then you can
-     * add the element, e.g. li back into the condition here. However, if you 
-     * then become more careful and do provide the closing tag, the output is 
+     * add the element, e.g. li back into the condition here. However, if you
+     * then become more careful and do provide the closing tag, the output is
      * generally just the closing tag, which is incorrect.
-     *
+     * <p>
      * tag.equalsIgnoreCase("tr") || // Is sometimes minimized
      * tag.equalsIgnoreCase("th") || // Is sometimes minimized
      * tag.equalsIgnoreCase("td") || // Is sometimes minimized
@@ -518,20 +520,16 @@ public class Comments {
      * tag.equalsIgnoreCase("li") // Is sometimes minimized
      */
     public static boolean isMinimizedTag(String tag) {
-        if (tag.equalsIgnoreCase("p") ||
-            tag.equalsIgnoreCase("br") ||
-            tag.equalsIgnoreCase("hr")
-            ) {
-            return true;
-	}
-        return false;
+        return tag.equalsIgnoreCase("p") ||
+                tag.equalsIgnoreCase("br") ||
+                tag.equalsIgnoreCase("hr");
     }
 
-    /** 
-     * The file where the XML representing the new Comments object is stored. 
+    /**
+     * The file where the XML representing the new Comments object is stored.
      */
     private static PrintWriter outputFile = null;
-    
+
 }
 
 

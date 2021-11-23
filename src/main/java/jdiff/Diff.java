@@ -1,25 +1,28 @@
 package jdiff;
 
-import java.io.*;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.*;
 
-/** 
+/**
  * Class to generate colored differences between two sections of HTML text.
- *
+ * <p>
  * See the file LICENSE.txt for copyright details.
+ *
  * @author Matthew Doar, mdoar@pobox.com
  */
 class Diff {
 
-    /** 
+    /**
      * Save the differences between the two strings in a DiffOutput object
      * for later use.
-     * 
-     * @param id A per-package unique identifier for each documentation 
+     *
+     * @param id A per-package unique identifier for each documentation
      *           change.
-     */ 
-    static String saveDocDiffs(String pkgName, String className, 
-                               String oldDoc, String newDoc, 
+     */
+    static String saveDocDiffs(String pkgName, String className,
+                               String oldDoc, String newDoc,
                                String id, String title) {
         // Generate the string which will link to this set of diffs
         if (noDocDiffs)
@@ -32,15 +35,15 @@ class Diff {
         generateDiffs(pkgName, className, oldDoc, newDoc, id, title);
 
         return "Documentation <a href=\"" + diffFileName + pkgName +
-            HTMLReportGenerator.reportFileExt + "#" + id + 
-            "\">changed</a> from ";
+                HTMLReportGenerator.reportFileExt + "#" + id +
+                "\">changed</a> from ";
     }
-    
-    /** 
-     * Generate the differences. 
+
+    /**
+     * Generate the differences.
      */
     static void generateDiffs(String pkgName, String className,
-                              String oldDoc, String newDoc, 
+                              String oldDoc, String newDoc,
                               String id, String title) {
         String[] oldDocWords = parseDoc(oldDoc);
         String[] newDocWords = parseDoc(newDoc);
@@ -57,13 +60,13 @@ class Diff {
         docDiffs.add(new DiffOutput(pkgName, className, id, title, text));
     }
 
-    /** 
+    /**
      * Convert the string to an array of strings, but don't break HTML tags up.
      */
     static String[] parseDoc(String doc) {
         String delimiters = " .,;:?!(){}[]\"'~@#$%^&*+=_-|\\<>/";
         StringTokenizer st = new StringTokenizer(doc, delimiters, true);
-        List docList = new ArrayList();
+        List<String> docList = new ArrayList<>();
         boolean inTag = false;
         String tag = null;
         while (st.hasMoreTokens()) {
@@ -81,8 +84,8 @@ class Diff {
                         }
                     }
                     if (!inTag)
-                      docList.add(tag);
-                } else { 
+                        docList.add(tag);
+                } else {
                     docList.add(tok);
                 }
             } else {
@@ -91,31 +94,31 @@ class Diff {
                     inTag = false;
                     tag += tok;
                     docList.add(tag);
-                } else { 
+                } else {
                     tag += tok;
                 }
             }
-        }   
+        }
         if (inTag) {
             // An unterminated tag, or more likely, < used instead of &lt;
             // There are no nested tags such as <a <b>> in HTML
             docList.add(tag);
         }
         String[] docWords = new String[docList.size()];
-        docWords = (String[])docList.toArray(docWords);
+        docWords = docList.toArray(docWords);
         return docWords;
     }
 
-    /** 
-     * For improved readability, merge changes of the form 
-     *  "delete 1, insert 1, space, delete 1, insert 1"
-     * to 
-     *  "delete 3, insert 3" (including the space).
+    /**
+     * For improved readability, merge changes of the form
+     * "delete 1, insert 1, space, delete 1, insert 1"
+     * to
+     * "delete 3, insert 3" (including the space).
      *
      * @param oldDocWords The original documentation as a String array
      * @param newDocWords The new documentation as a String array
      */
-    static DiffMyers.change mergeDiffs(String[] oldDocWords, String[] newDocWords, 
+    static DiffMyers.change mergeDiffs(String[] oldDocWords, String[] newDocWords,
                                        DiffMyers.change script) {
         if (script.link == null)
             return script; // Only one change
@@ -129,16 +132,16 @@ class Diff {
                 if (deletes == 1 && inserts == 1) {
                     // This is the start of a potential merge
                     lasthunk = hunk;
-                } 
+                }
                 continue;
             } else {
                 int first0 = hunk.line0; // Index of first deleted word
                 int first1 = hunk.line1; // Index of first inserted word
-                if (deletes == 1 && inserts == 1 && 
-                    oldDocWords[first0 - 1].compareTo(" ") == 0 && 
-                    newDocWords[first1 - 1].compareTo(" ") == 0 &&
-                    first0 == lasthunk.line0 + lasthunk.deleted + 1 &&
-                    first1 == lasthunk.line1 + lasthunk.inserted + 1) {
+                if (deletes == 1 && inserts == 1 &&
+                        oldDocWords[first0 - 1].compareTo(" ") == 0 &&
+                        newDocWords[first1 - 1].compareTo(" ") == 0 &&
+                        first0 == lasthunk.line0 + lasthunk.deleted + 1 &&
+                        first1 == lasthunk.line1 + lasthunk.inserted + 1) {
                     // Merge this change into the last change
                     lasthunk.deleted += 2;
                     lasthunk.inserted += 2;
@@ -147,12 +150,12 @@ class Diff {
                     lasthunk = null;
                 }
             }
-        }            
+        }
         return script;
     }
 
-    /** 
-     * Add the differences to the text passed in. The old documentation is 
+    /**
+     * Add the differences to the text passed in. The old documentation is
      * edited using the edit script provided by the DiffMyers object.
      * Do not display diffs in HTML tags.
      *
@@ -160,7 +163,7 @@ class Diff {
      * @param newDocWords The new documentation as a String array
      * @return The text for this documentation difference
      */
-    static String addDiffs(String[] oldDocWords, String[] newDocWords, 
+    static String addDiffs(String[] oldDocWords, String[] newDocWords,
                            DiffMyers.change script, String text) {
         String res = text;
         DiffMyers.change hunk = script;
@@ -189,11 +192,11 @@ class Diff {
             // in each file.
             int first0 = hunk.line0; // Index of first deleted word
             // Index of last deleted word, invalid if deletes == 0
-            int last0 = hunk.line0 + hunk.deleted - 1; 
+            int last0 = hunk.line0 + hunk.deleted - 1;
             int first1 = hunk.line1; // Index of first inserted word
             // Index of last inserted word, invalid if inserts == 0
             int last1 = hunk.line1 + hunk.inserted - 1;
-            
+
             if (trace) {
                 System.out.println("HUNK: ");
                 System.out.println("inserts: " + inserts);
@@ -215,8 +218,8 @@ class Diff {
             if (deletes != 0) {
                 boolean inStrike = false;
                 for (int i = first0; i <= last0; i++) {
-                    if (!oldDocWords[i].startsWith("<") && 
-                        !oldDocWords[i].endsWith(">")) {
+                    if (!oldDocWords[i].startsWith("<") &&
+                            !oldDocWords[i].endsWith(">")) {
                         if (!inStrike) {
                             if (deleteEffect == 0)
                                 res += "<strike>";
@@ -238,8 +241,8 @@ class Diff {
             if (inserts != 0) {
                 boolean inEmph = false;
                 for (int i = first1; i <= last1; i++) {
-                    if (!newDocWords[i].startsWith("<") && 
-                        !newDocWords[i].endsWith(">")) {
+                    if (!newDocWords[i].startsWith("<") &&
+                            !newDocWords[i].endsWith(">")) {
                         if (!inEmph) {
                             if (insertEffect == 0)
                                 res += "<font color=\"red\">";
@@ -265,19 +268,19 @@ class Diff {
         return res;
     }
 
-    /** 
+    /**
      * Emit all the documentation differences into one file per package.
-     */ 
+     */
     static void emitDocDiffs(String fullReportFileName) {
         Collections.sort(docDiffs);
 
         DiffOutput[] docDiffsArr = new DiffOutput[docDiffs.size()];
-        docDiffsArr = (DiffOutput[])docDiffs.toArray(docDiffsArr);
+        docDiffsArr = docDiffs.toArray(docDiffsArr);
 
         for (int i = 0; i < docDiffsArr.length; i++) {
             DiffOutput diffOutput = docDiffsArr[i];
-            if (currPkgName == null || 
-                currPkgName.compareTo(diffOutput.pkgName_) != 0) {
+            if (currPkgName == null ||
+                    currPkgName.compareTo(diffOutput.pkgName_) != 0) {
                 // Open a different file for each package, add the HTML header,
                 // the navigation bar and some preamble.
                 if (currPkgName != null)
@@ -285,8 +288,8 @@ class Diff {
                 // Create the HTML link to the previous package
                 String prevPkgName = currPkgName;
                 if (currPkgName != null) {
-                    prevPkgName = diffFileName + docDiffsArr[i-1].pkgName_ +
-                    HTMLReportGenerator.reportFileExt;
+                    prevPkgName = diffFileName + docDiffsArr[i - 1].pkgName_ +
+                            HTMLReportGenerator.reportFileExt;
                 }
                 // Set the current package name
                 currPkgName = diffOutput.pkgName_;
@@ -295,19 +298,19 @@ class Diff {
                 for (int j = i; j < docDiffsArr.length; j++) {
                     if (currPkgName.compareTo(docDiffsArr[j].pkgName_) != 0) {
                         nextPkgName = diffFileName + docDiffsArr[j].pkgName_ +
-                            HTMLReportGenerator.reportFileExt;
+                                HTMLReportGenerator.reportFileExt;
                         break;
                     }
                 }
 
-                String fullDiffFileName = fullReportFileName + 
-                    JDiff.DIR_SEP + diffFileName + currPkgName +
-                    HTMLReportGenerator.reportFileExt;
+                String fullDiffFileName = fullReportFileName +
+                        JDiff.DIR_SEP + diffFileName + currPkgName +
+                        HTMLReportGenerator.reportFileExt;
                 // Create the output file
                 try {
                     FileOutputStream fos = new FileOutputStream(fullDiffFileName);
                     diffFile = new PrintWriter(fos);
-                    
+
                     // Write the HTML header
                     diffFile.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Frameset//EN\"\"" + RootDocToXML.baseURI + "/TR/REC-html40/frameset.dtd\">");
                     diffFile.println("<HTML>");
@@ -324,7 +327,7 @@ class Diff {
                     diffFile.println("</TITLE>");
                     diffFile.println("</HEAD>");
                     diffFile.println("<BODY>");
-                                        
+
                     // Write the navigation bar
                     diffFile.println("<!-- Start of nav bar -->");
                     diffFile.println("<TABLE summary=\"Navigation bar\" BORDER=\"0\" WIDTH=\"100%\" CELLPADDING=\"1\" CELLSPACING=\"0\">");
@@ -350,11 +353,11 @@ class Diff {
                     diffFile.println("    </TR>");
                     diffFile.println("  </TABLE>");
                     diffFile.println("</TD>");
-                    
+
                     // The right hand side title
                     diffFile.println("<TD ALIGN=\"right\" VALIGN=\"top\" ROWSPAN=3><EM><b>Generated by<br><a href=\"" + JDiff.jDiffLocation + "\" class=\"staysblack\" target=\"_top\">JDiff</a></b></EM></TD>");
                     diffFile.println("</TR>");
-                    
+
                     // Links for previous and next, and frames and no frames
                     diffFile.println("<TR>");
                     diffFile.println("  <TD BGCOLOR=\"" + HTMLReportGenerator.bgcolor + "\" CLASS=\"NavBarCell2\"><FONT SIZE=\"-2\">");
@@ -371,11 +374,11 @@ class Diff {
                     diffFile.println("  &nbsp;<A HREF=\"" + diffFileName + currPkgName + HTMLReportGenerator.reportFileExt + "\" TARGET=\"_top\"><B>NO FRAMES</B></A></FONT></TD>");
                     diffFile.println("  <TD BGCOLOR=\"" + HTMLReportGenerator.bgcolor + "\" CLASS=\"NavBarCell2\">&nbsp;</TD>");
                     diffFile.println("</TR>");
-                    
+
                     diffFile.println("</TABLE>");
                     diffFile.println("<HR>");
                     diffFile.println("<!-- End of nav bar -->");
-                    
+
                     diffFile.println("<h2>");
                     diffFile.println(currPkgName + " Documentation Differences");
                     diffFile.println("</h2>");
@@ -391,20 +394,20 @@ class Diff {
                     else if (insertEffect == 1)
                         diffFile.println("additions are shown <span style=\"background: #FFFF00\">like this</span>.");
                     diffFile.println("</blockquote>");
-                    
+
                     diffFile.println("<blockquote>");
                     diffFile.println("If no deletions or additions are shown in an entry, the HTML tags will be what has changed. The <i>new</i> HTML tags are shown in the differences. ");
                     diffFile.println("If no documentation existed, and then some was added in a later version, this change is noted in the appropriate class pages of differences, but the change is not shown on this page. Only changes in existing text are shown here. ");
                     diffFile.println("Similarly, documentation which was inherited from another class or interface is not shown here.");
                     diffFile.println("</blockquote>");
-                    
+
                     diffFile.println("<blockquote>");
                     diffFile.println(" Note that an HTML error in the new documentation may cause the display of other documentation changes to be presented incorrectly. For instance, failure to close a &lt;code&gt; tag will cause all subsequent paragraphs to be displayed differently.");
                     diffFile.println("</blockquote>");
                     diffFile.println("<hr>");
                     diffFile.println();
-                    
-                } catch(IOException e) {
+
+                } catch (IOException e) {
                     System.out.println("IO Error while attempting to create " + fullDiffFileName);
                     System.out.println("Error: " + e.getMessage());
                     System.exit(1);
@@ -413,10 +416,10 @@ class Diff {
             // Now add the documentation difference text
             diffFile.println(diffOutput.text_);
             // Separate with a horizontal line
-            if (i != docDiffsArr.length - 1 && 
-                diffOutput.className_ != null && 
-                docDiffsArr[i+1].className_ != null &&
-                diffOutput.className_.compareTo(docDiffsArr[i+1].className_) != 0)
+            if (i != docDiffsArr.length - 1 &&
+                    diffOutput.className_ != null &&
+                    docDiffsArr[i + 1].className_ != null &&
+                    diffOutput.className_.compareTo(docDiffsArr[i + 1].className_) != 0)
                 diffFile.println("<hr align=\"left\" width=\"100%\">");
 //            else
 //                diffFile.println("<hr align=\"left\" width=\"50%\">");
@@ -428,21 +431,21 @@ class Diff {
         emitDocDiffIndex(fullReportFileName, docDiffsArr);
     }
 
-    /** 
+    /**
      * Emit the single file which is the index to all documentation changes.
      */
-    public static void emitDocDiffIndex(String fullReportFileName, 
-                                        DiffOutput[] docDiffsArr) { 
+    public static void emitDocDiffIndex(String fullReportFileName,
+                                        DiffOutput[] docDiffsArr) {
 
-        String fullDiffFileName = fullReportFileName + 
-            JDiff.DIR_SEP + diffFileName + "index" +
-            HTMLReportGenerator.reportFileExt;
+        String fullDiffFileName = fullReportFileName +
+                JDiff.DIR_SEP + diffFileName + "index" +
+                HTMLReportGenerator.reportFileExt;
 
         // Create the output file
         try {
             FileOutputStream fos = new FileOutputStream(fullDiffFileName);
             diffFile = new PrintWriter(fos);
-            
+
             // Write the HTML header
             diffFile.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Frameset//EN\"\"" + RootDocToXML.baseURI + "/TR/REC-html40/frameset.dtd\">");
             diffFile.println("<HTML>");
@@ -459,7 +462,7 @@ class Diff {
             diffFile.println("</TITLE>");
             diffFile.println("</HEAD>");
             diffFile.println("<BODY>");
-                        
+
             // Write the navigation bar
             diffFile.println("<!-- Start of nav bar -->");
             diffFile.println("<TABLE summary=\"Navigation bar\" BORDER=\"0\" WIDTH=\"100%\" CELLPADDING=\"1\" CELLSPACING=\"0\">");
@@ -482,11 +485,11 @@ class Diff {
             diffFile.println("    </TR>");
             diffFile.println("  </TABLE>");
             diffFile.println("</TD>");
-            
+
             // The right hand side title
             diffFile.println("<TD ALIGN=\"right\" VALIGN=\"top\" ROWSPAN=3><EM><b>Generated by<br><a href=\"" + JDiff.jDiffLocation + "\" class=\"staysblack\" target=\"_top\">JDiff</a></b></EM></TD>");
             diffFile.println("</TR>");
-            
+
             // Links for frames and no frames
             diffFile.println("<TR>");
             diffFile.println("  <TD BGCOLOR=\"" + HTMLReportGenerator.bgcolor + "\" CLASS=\"NavBarCell2\"><FONT SIZE=\"-2\">");
@@ -494,16 +497,16 @@ class Diff {
             diffFile.println("  &nbsp;<A HREF=\"" + diffFileName + "index" + HTMLReportGenerator.reportFileExt + "\" TARGET=\"_top\"><B>NO FRAMES</B></A></FONT></TD>");
             diffFile.println("  <TD BGCOLOR=\"" + HTMLReportGenerator.bgcolor + "\" CLASS=\"NavBarCell2\">&nbsp;</TD>");
             diffFile.println("</TR>");
-            
+
             diffFile.println("</TABLE>");
             diffFile.println("<HR>");
             diffFile.println("<!-- End of nav bar -->");
-            
+
             diffFile.println("<h2>");
             diffFile.println("All Documentation Differences");
             diffFile.println("</h2>");
             diffFile.println();
-            
+
             // For each package and class, add the first DiffOutput to
             // the hash table. Used when generating navigation bars.
             boolean firstPackage = true; // Set for the first package
@@ -516,7 +519,7 @@ class Diff {
                 String link = "<a href=\"" + Diff.diffFileName + diffOutput.pkgName_ + HTMLReportGenerator.reportFileExt + "#" + diffOutput.id_ + "\">";
 
                 // See if the package name changed
-                if (firstPackage || diffOutput.pkgName_.compareTo(docDiffsArr[i-1].pkgName_) != 0) {
+                if (firstPackage || diffOutput.pkgName_.compareTo(docDiffsArr[i - 1].pkgName_) != 0) {
                     if (firstPackage) {
                         firstPackage = false;
                     } else {
@@ -535,9 +538,9 @@ class Diff {
                     }
                 }
                 // See if the class name changed
-                if (diffOutput.className_ != null && 
-                    (firstClass || 
-                     diffOutput.className_.compareTo(docDiffsArr[i-1].className_) != 0)) {
+                if (diffOutput.className_ != null &&
+                        (firstClass ||
+                                diffOutput.className_.compareTo(docDiffsArr[i - 1].className_) != 0)) {
                     if (firstClass) {
                         firstClass = false;
                     } else {
@@ -556,15 +559,15 @@ class Diff {
                 }
                 // Work out what kind of member this is, and
                 // display it appropriately
-                if (diffOutput.className_ != null && 
-                    !diffOutput.id_.endsWith("!class")) {
+                if (diffOutput.className_ != null &&
+                        !diffOutput.id_.endsWith("!class")) {
                     int ctorIdx = diffOutput.id_.indexOf(".ctor");
                     if (ctorIdx != -1) {
                         diffFile.println("&nbsp;&nbsp;&nbsp;&nbsp;" + link + diffOutput.className_ + diffOutput.id_.substring(ctorIdx + 5) + "</a><br>");
                     } else {
                         int methodIdx = diffOutput.id_.indexOf(".dmethod.");
                         if (methodIdx != -1) {
-                            diffFile.println("&nbsp;&nbsp;&nbsp;&nbsp;"  + "Method " + link + diffOutput.id_.substring(methodIdx + 9) + "</a><br>");
+                            diffFile.println("&nbsp;&nbsp;&nbsp;&nbsp;" + "Method " + link + diffOutput.id_.substring(methodIdx + 9) + "</a><br>");
                         } else {
                             int fieldIdx = diffOutput.id_.indexOf(".field.");
                             if (fieldIdx != -1) {
@@ -574,7 +577,7 @@ class Diff {
                     } //if (ctorIdx != -1)
                 } //diffOutput.className_ != null
             }
-        } catch(IOException e) {
+        } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + fullDiffFileName);
             System.out.println("Error: " + e.getMessage());
             System.exit(1);
@@ -582,10 +585,10 @@ class Diff {
         closeDiffFile();
     }
 
-    /** 
-     * Emit the HTML footer and close the diff file. 
+    /**
+     * Emit the HTML footer and close the diff file.
      */
-    public static void closeDiffFile() { 
+    public static void closeDiffFile() {
         if (diffFile != null) {
             // Write the HTML footer
             diffFile.println();
@@ -595,60 +598,64 @@ class Diff {
         }
     }
 
-    /** 
+    /**
      * Current file where documentation differences are written as colored
      * differences.
      */
     public static PrintWriter diffFile = null;
 
-    /** 
-     * Base name of the current file where documentation differences are 
+    /**
+     * Base name of the current file where documentation differences are
      * written as colored differences.
      */
     public static String diffFileName = "docdiffs_";
 
-    /** 
+    /**
      * The name of the current package, used to create diffFileName.
      */
     private static String currPkgName = null;
 
-    /** 
-     * If set, then do not generate colored diffs for documentation. 
+    /**
+     * If set, then do not generate colored diffs for documentation.
      * Default is true.
      */
     public static boolean noDocDiffs = true;
 
-    /** 
+    /**
      * Define the type of emphasis for deleted words.
      * 0 strikes the words through.
      * 1 outlines the words in light grey.
      */
     public static int deleteEffect = 0;
 
-    /** 
+    /**
      * Define the type of emphasis for inserted words.
      * 0 colors the words red.
      * 1 outlines the words in yellow, like a highlighter.
      */
     public static int insertEffect = 1;
 
-    /** 
+    /**
      * For each package and class, the first DiffOutput is added to
      * this hash table. Used when generating navigation bars.
      */
-    public static Hashtable firstDiffOutput = new Hashtable();
+    public static Hashtable<String, String> firstDiffOutput = new Hashtable<>();
 
-    /** 
+    /**
      * If set, then show changes in implementation-related modifiers such as
-     * native and synchronized. For more information, see 
+     * native and synchronized. For more information, see
      * http://java.sun.com/j2se/1.4.1/docs/tooldocs/solaris/javadoc.html#generatedapideclarations
      */
     public static boolean showAllChanges = false;
 
-    /** The list of documentation differences. */
-    private static List docDiffs = new ArrayList(); // DiffOutput[]
-        
-    /** Set to enable increased logging verbosity for debugging. */
-    private static boolean trace = false;
-        
+    /**
+     * The list of documentation differences.
+     */
+    private static final List<DiffOutput> docDiffs = new ArrayList<>(); // DiffOutput[]
+
+    /**
+     * Set to enable increased logging verbosity for debugging.
+     */
+    private static final boolean trace = false;
+
 }  

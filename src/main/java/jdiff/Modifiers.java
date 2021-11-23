@@ -1,58 +1,64 @@
 package jdiff;
 
-import java.io.*;
-import java.util.*;
-
 /**
  * Track the various modifiers for a program element.
- *
+ * <p>
  * The method used for Collection comparison (compareTo) must make its
  * comparison based upon everything that is known about this set of modifiers.
- *
+ * <p>
  * See the file LICENSE.txt for copyright details.
+ *
  * @author Matthew Doar, mdoar@pobox.com
  */
-class Modifiers implements Comparable {
+class Modifiers implements Comparable<Modifiers> {
 
-    /** Set if the program element is static. */
+    /**
+     * Set if the program element is static.
+     */
     public boolean isStatic = false;
 
-    /** Set if the program element is final. */
+    /**
+     * Set if the program element is final.
+     */
     public boolean isFinal = false;
 
-    /** Set if the program element is deprecated. */
+    /**
+     * Set if the program element is deprecated.
+     */
     public boolean isDeprecated = false;
 
-    /** 
-     * The visibility level; "public", "protected", "package" or 
-     * "private" 
+    /**
+     * The visibility level; "public", "protected", "package" or
+     * "private"
      */
     public String visibility = null;
 
-    /** Default constructor. */
+    /**
+     * Default constructor.
+     */
     public Modifiers() {
     }
 
-    /** Compare two Modifiers objects by their contents. */
-    public int compareTo(Object o) {
-        Modifiers oModifiers = (Modifiers)o;
-        if (isStatic != oModifiers.isStatic)
+    /**
+     * Compare two Modifiers objects by their contents.
+     */
+    public int compareTo(Modifiers o) {
+        if (isStatic != o.isStatic)
             return -1;
-        if (isFinal != oModifiers.isFinal)
+        if (isFinal != o.isFinal)
             return -1;
-        if (isDeprecated != oModifiers.isDeprecated)
+        if (isDeprecated != o.isDeprecated)
             return -1;
         if (visibility != null) {
-            int comp = visibility.compareTo(oModifiers.visibility);
-            if (comp != 0)
-                return comp;
+            int comp = visibility.compareTo(o.visibility);
+            return comp;
         }
         return 0;
     }
 
-    /** 
+    /**
      * Generate a String describing the differences between the current
-     * (old) Modifiers object and a new Modifiers object. The string has 
+     * (old) Modifiers object and a new Modifiers object. The string has
      * no leading space, but does end in a period.
      *
      * @param newModifiers The new Modifiers object.
@@ -63,7 +69,7 @@ class Modifiers implements Comparable {
         boolean hasContent = false;
         if (isStatic != newModifiers.isStatic) {
             res += "Change from ";
-            if (isStatic) 
+            if (isStatic)
                 res += "static to non-static.<br>";
             else
                 res += "non-static to static.<br>";
@@ -73,14 +79,14 @@ class Modifiers implements Comparable {
             if (hasContent)
                 res += " ";
             res += "Change from ";
-            if (isFinal) 
+            if (isFinal)
                 res += "final to non-final.<br>";
             else
                 res += "non-final to final.<br>";
             hasContent = true;
         }
         if (!HTMLReportGenerator.incompatibleChangesOnly &&
-        	isDeprecated != newModifiers.isDeprecated) {
+                isDeprecated != newModifiers.isDeprecated) {
             if (hasContent)
                 res += " ";
             if (isDeprecated)
@@ -94,8 +100,8 @@ class Modifiers implements Comparable {
             if (comp != 0) {
                 if (hasContent)
                     res += " ";
-                res += "Change of visibility from " + visibility + " to " + 
-                    newModifiers.visibility + ".<br>";
+                res += "Change of visibility from " + visibility + " to " +
+                        newModifiers.visibility + ".<br>";
                 hasContent = true;
             }
         }

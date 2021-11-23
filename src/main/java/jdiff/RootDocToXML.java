@@ -1,40 +1,42 @@
 package jdiff;
 
 import com.sun.javadoc.*;
-import com.sun.javadoc.Parameter;
-import com.sun.javadoc.Type;
 
-import java.util.*;
 import java.io.*;
-import java.lang.reflect.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.*;
 
 /**
- * Converts a Javadoc RootDoc object into a representation in an 
+ * Converts a Javadoc RootDoc object into a representation in an
  * XML file.
- *
+ * <p>
  * See the file LICENSE.txt for copyright details.
+ *
  * @author Matthew Doar, mdoar@pobox.com
  */
 public class RootDocToXML {
 
-    /** Default constructor. */
+    /**
+     * Default constructor.
+     */
     public RootDocToXML() {
     }
 
     /**
      * Write the XML representation of the API to a file.
      *
-     * @param root  the RootDoc object passed by Javadoc
+     * @param root the RootDoc object passed by Javadoc
      * @return true if no problems encountered
      */
     public static boolean writeXML(RootDoc root) {
-    	String tempFileName = outputFileName;
-    	if (outputDirectory != null) {
-	    tempFileName = outputDirectory;
-	    if (!tempFileName.endsWith(JDiff.DIR_SEP)) 
-		tempFileName += JDiff.DIR_SEP;
-	    tempFileName += outputFileName;
-    	}
+        String tempFileName = outputFileName;
+        if (outputDirectory != null) {
+            tempFileName = outputDirectory;
+            if (!tempFileName.endsWith(JDiff.DIR_SEP))
+                tempFileName += JDiff.DIR_SEP;
+            tempFileName += outputFileName;
+        }
 
         try {
             FileOutputStream fos = new FileOutputStream(tempFileName);
@@ -48,9 +50,9 @@ public class RootDocToXML {
                 apiWriter.emitXMLFooter();
             }
             outputFile.close();
-        } catch(IOException e) {
+        } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + tempFileName);
-            System.out.println("Error: " +  e.getMessage());
+            System.out.println("Error: " + e.getMessage());
             System.exit(1);
         }
         // If validation is desired, write out the appropriate api.xsd file
@@ -67,23 +69,23 @@ public class RootDocToXML {
     public static void writeXSD() {
         String xsdFileName = outputFileName;
         if (outputDirectory == null) {
-	    int idx = xsdFileName.lastIndexOf('\\');
-	    int idx2 = xsdFileName.lastIndexOf('/');
-	    if (idx == -1 && idx2 == -1) {
-		xsdFileName = "";
-	    } else if (idx == -1 && idx2 != -1) {
-		xsdFileName = xsdFileName.substring(0, idx2);
-	    } else if (idx != -1  && idx2 == -1) {
-		xsdFileName = xsdFileName.substring(0, idx);
-	    } else if (idx != -1  && idx2 != -1) {
-		int max = idx2 > idx ? idx2 : idx;
-		xsdFileName = xsdFileName.substring(0, max);
-	    }
-	} else {
-	    xsdFileName = outputDirectory;
-	    if (!xsdFileName.endsWith(JDiff.DIR_SEP)) 
-		 xsdFileName += JDiff.DIR_SEP;
-	}
+            int idx = xsdFileName.lastIndexOf('\\');
+            int idx2 = xsdFileName.lastIndexOf('/');
+            if (idx == -1 && idx2 == -1) {
+                xsdFileName = "";
+            } else if (idx == -1 && idx2 != -1) {
+                xsdFileName = xsdFileName.substring(0, idx2);
+            } else if (idx != -1 && idx2 == -1) {
+                xsdFileName = xsdFileName.substring(0, idx);
+            } else if (idx != -1 && idx2 != -1) {
+                int max = idx2 > idx ? idx2 : idx;
+                xsdFileName = xsdFileName.substring(0, max);
+            }
+        } else {
+            xsdFileName = outputDirectory;
+            if (!xsdFileName.endsWith(JDiff.DIR_SEP))
+                xsdFileName += JDiff.DIR_SEP;
+        }
         xsdFileName += "api.xsd";
         try {
             FileOutputStream fos = new FileOutputStream(xsdFileName);
@@ -201,9 +203,9 @@ public class RootDocToXML {
             xsdFile.println();
             xsdFile.println("</xsd:schema>");
             xsdFile.close();
-        } catch(IOException e) {
+        } catch (IOException e) {
             System.out.println("IO Error while attempting to create " + xsdFileName);
-            System.out.println("Error: " +  e.getMessage());
+            System.out.println("Error: " + e.getMessage());
             System.exit(1);
         }
     }
@@ -221,53 +223,53 @@ public class RootDocToXML {
     /**
      * Process each package and the classes/interfaces within it.
      *
-     * @param pd  an array of PackageDoc objects
+     * @param pd an array of PackageDoc objects
      */
     public void processPackages(RootDoc root) {
         PackageDoc[] specified_pd = root.specifiedPackages();
-	Map pdl = new TreeMap();
+        Map<String, PackageDoc> pdl = new TreeMap<String, PackageDoc>();
         for (int i = 0; specified_pd != null && i < specified_pd.length; i++) {
-	    pdl.put(specified_pd[i].name(), specified_pd[i]);
-	}
+            pdl.put(specified_pd[i].name(), specified_pd[i]);
+        }
 
-	// Classes may be specified separately, so merge their packages into the
-	// list of specified packages.
+        // Classes may be specified separately, so merge their packages into the
+        // list of specified packages.
         ClassDoc[] cd = root.specifiedClasses();
-	// This is lists of the specific classes to document
-	Map classesToUse = new HashMap();
+        // This is lists of the specific classes to document
+        Map classesToUse = new HashMap();
         for (int i = 0; cd != null && i < cd.length; i++) {
-	    PackageDoc cpd = cd[i].containingPackage();
-	    if (cpd == null && !packagesOnly) {
-		// If the RootDoc object has been created from a jar file
-		// this duplicates classes, so we have to be able to disable it.
-		// TODO this is still null?
-		cpd = root.packageNamed("anonymous");
-	    }
+            PackageDoc cpd = cd[i].containingPackage();
+            if (cpd == null && !packagesOnly) {
+                // If the RootDoc object has been created from a jar file
+                // this duplicates classes, so we have to be able to disable it.
+                // TODO this is still null?
+                cpd = root.packageNamed("anonymous");
+            }
             String pkgName = cpd.name();
             String className = cd[i].name();
-	    if (trace) System.out.println("Found package " + pkgName + " for class " + className);
-	    if (!pdl.containsKey(pkgName)) {
-		if (trace) System.out.println("Adding new package " + pkgName);
-		pdl.put(pkgName, cpd);
-	    }
+            if (trace) System.out.println("Found package " + pkgName + " for class " + className);
+            if (!pdl.containsKey(pkgName)) {
+                if (trace) System.out.println("Adding new package " + pkgName);
+                pdl.put(pkgName, cpd);
+            }
 
-	    // Keep track of the specific classes to be used for this package
-	    List classes;
-	    if (classesToUse.containsKey(pkgName)) {
-		classes = (ArrayList) classesToUse.get(pkgName);
-	    } else {
-		classes = new ArrayList();
-	    }
-	    classes.add(cd[i]);
-	    classesToUse.put(pkgName, classes);
-	}
+            // Keep track of the specific classes to be used for this package
+            List classes;
+            if (classesToUse.containsKey(pkgName)) {
+                classes = (ArrayList) classesToUse.get(pkgName);
+            } else {
+                classes = new ArrayList();
+            }
+            classes.add(cd[i]);
+            classesToUse.put(pkgName, classes);
+        }
 
-	PackageDoc[] pd = (PackageDoc[]) pdl.values().toArray(new PackageDoc[0]);
+        PackageDoc[] pd = (PackageDoc[]) pdl.values().toArray(new PackageDoc[0]);
         for (int i = 0; pd != null && i < pd.length; i++) {
             String pkgName = pd[i].name();
-            
+
             // Check for an exclude tag in the package doc block, but not
-	    // in the package.htm[l] file.
+            // in the package.htm[l] file.
             if (!shownElement(pd[i], null))
                 continue;
 
@@ -276,19 +278,19 @@ public class RootDocToXML {
 
             int tagCount = pd[i].tags().length;
             if (trace) System.out.println("#tags: " + tagCount);
-            
+
             List classList;
-	    if (classesToUse.containsKey(pkgName)) {
-		// Use only the specified classes in the package
-		System.out.println("Using the specified classes");
-		classList = (ArrayList) classesToUse.get(pkgName);
-	    } else {
-		// Use all classes in the package
-		classList = new LinkedList(Arrays.asList(pd[i].allClasses()));
-	    }
+            if (classesToUse.containsKey(pkgName)) {
+                // Use only the specified classes in the package
+                System.out.println("Using the specified classes");
+                classList = (ArrayList) classesToUse.get(pkgName);
+            } else {
+                // Use all classes in the package
+                classList = new LinkedList(Arrays.asList(pd[i].allClasses()));
+            }
             Collections.sort(classList);
             ClassDoc[] classes = new ClassDoc[classList.size()];
-            classes = (ClassDoc[])classList.toArray(classes);
+            classes = (ClassDoc[]) classList.toArray(classes);
             processClasses(classes, pkgName);
 
             addPkgDocumentation(root, pd[i], 2);
@@ -296,7 +298,7 @@ public class RootDocToXML {
             outputFile.println("</package>");
         }
     } // processPackages
-    
+
     /**
      * Process classes and interfaces.
      *
@@ -312,9 +314,7 @@ public class RootDocToXML {
             // Only save the shown elements
             if (!shownElement(cd[i], classVisibilityLevel))
                 continue;
-            boolean isInterface = false;
-            if (cd[i].isInterface())
-                isInterface = true;
+            boolean isInterface = cd[i].isInterface();
             if (isInterface) {
                 outputFile.println("  <!-- start interface " + pkgName + "." + className + " -->");
                 outputFile.print("  <interface name=\"" + className + "\"");
@@ -353,7 +353,7 @@ public class RootDocToXML {
             */
         }//for
     }//processClasses()
-    
+
     /**
      * Add qualifiers for the program element as attributes.
      *
@@ -380,13 +380,13 @@ public class RootDocToXML {
         // Deprecation on its own line
         for (int i = 0; i < indent; i++) outputFile.print(" ");
         boolean isDeprecated = false;
-        Tag[] ta = ((Doc)ped).tags("deprecated");
+        Tag[] ta = ped.tags("deprecated");
         if (ta.length != 0) {
             isDeprecated = true;
         }
         if (ta.length > 1) {
             System.out.println("JDiff: warning: multiple @deprecated tags found in comments for " + ped.name() + ". Using the first one only.");
-            System.out.println("Text is: " + ((Doc)ped).getRawCommentText());
+            System.out.println("Text is: " + ped.getRawCommentText());
         }
         if (isDeprecated) {
             String text = ta[0].text(); // Use only one @deprecated tag
@@ -400,7 +400,7 @@ public class RootDocToXML {
                     if (idx == -1)
                         fs = text;
                     else
-                        fs = text.substring(0, idx+1);
+                        fs = text.substring(0, idx + 1);
                     String st = API.hideHTMLTags(fs);
                     outputFile.print("deprecated=\"" + st + "\"");
                 }
@@ -421,14 +421,14 @@ public class RootDocToXML {
     public void addSourcePosition(ProgramElementDoc ped, int indent) {
         if (!addSrcInfo)
             return;
-        if (JDiff.javaVersion.startsWith("1.1") || 
-            JDiff.javaVersion.startsWith("1.2") || 
-            JDiff.javaVersion.startsWith("1.3")) {
+        if (JDiff.javaVersion.startsWith("1.1") ||
+                JDiff.javaVersion.startsWith("1.2") ||
+                JDiff.javaVersion.startsWith("1.3")) {
             return; // position() only appeared in J2SE1.4
         }
         try {
             // Could cache the method for improved performance
-            Class c = ProgramElementDoc.class;
+            Class<? extends ProgramElementDoc> c = ProgramElementDoc.class;
             Method m = c.getMethod("position", null);
             Object sp = m.invoke(ped, null);
             if (sp != null) {
@@ -463,7 +463,7 @@ public class RootDocToXML {
             outputFile.println("    <implements name=\"" + ifaceName + "\"/>");
         }//for
     }//processInterfaces()
-    
+
     /**
      * Process the constructors in the class.
      *
@@ -494,7 +494,7 @@ public class RootDocToXML {
                 outputFile.println();
             addCommonModifiers(ct[i], 6);
             outputFile.println(">");
-            
+
             // Generate the exception elements if any exceptions are thrown
             processExceptions(ct[i].thrownExceptions());
 
@@ -503,7 +503,7 @@ public class RootDocToXML {
             outputFile.println("    </constructor>");
         }//for
     }//processConstructors()
-    
+
     /**
      * Process all exceptions thrown by a constructor or method.
      *
@@ -519,14 +519,14 @@ public class RootDocToXML {
             outputFile.println("\"/>");
         }//for
     }//processExceptions()
-    
+
     /**
      * Process the methods in the class.
      *
      * @param md An array of MethodDoc objects
      */
     public void processMethods(ClassDoc cd, MethodDoc[] md) {
-        if (trace) System.out.println("PROCESSING " +cd.name()+" METHODS, number = " + md.length);
+        if (trace) System.out.println("PROCESSING " + cd.name() + " METHODS, number = " + md.length);
         for (int i = 0; i < md.length; i++) {
             String methodName = md[i].name();
             if (trace) System.out.println("PROCESSING METHOD: " + methodName);
@@ -588,7 +588,7 @@ public class RootDocToXML {
             outputFile.println("\"");
             outputFile.print("      transient=\"" + fd[i].isTransient() + "\"");
             outputFile.println(" volatile=\"" + fd[i].isVolatile() + "\"");
-/* JDK 1.4 and later */
+            /* JDK 1.4 and later */
 /*
             String value = fd[i].constantValueExpression();
             if (value != null)
@@ -603,7 +603,7 @@ public class RootDocToXML {
 
         }//for
     }//processFields()
-    
+
     /**
      * Emit the type name. Removed any prefixed warnings about ambiguity.
      * The type maybe an array.
@@ -626,21 +626,21 @@ public class RootDocToXML {
      */
     private String buildEmittableTypeString(com.sun.javadoc.Type type) {
         if (type == null) {
-    	    return null;
+            return null;
         }
-      // type.toString() returns the fully qualified name of the type
-      // including the dimension and the parameters we just need to
-      // escape the generic parameters brackets so that the XML
-      // generated is correct
-      String name = type.toString().
-                         replaceAll("&", "&amp;").
-                         replaceAll("<", "&lt;").
-                         replaceAll(">", "&gt;");
-      if (name.startsWith("<<ambiguous>>")) {
-          name = name.substring(13);
-      }
-      return name;
-    }    
+        // type.toString() returns the fully qualified name of the type
+        // including the dimension and the parameters we just need to
+        // escape the generic parameters brackets so that the XML
+        // generated is correct
+        String name = type.toString().
+                replaceAll("&", "&amp;").
+                replaceAll("<", "&lt;").
+                replaceAll(">", "&gt;");
+        if (name.startsWith("<<ambiguous>>")) {
+            name = name.substring(13);
+        }
+        return name;
+    }
 
     /**
      * Emit the XML header.
@@ -674,31 +674,31 @@ public class RootDocToXML {
         outputFile.println("</api>");
     }
 
-    /** 
-     * Determine if the program element is shown, according to the given 
-     * level of visibility. 
+    /**
+     * Determine if the program element is shown, according to the given
+     * level of visibility.
      *
-     * @param ped The given program element.
+     * @param ped      The given program element.
      * @param visLevel The desired visibility level; "public", "protected",
-     *   "package" or "private". If null, only check for an exclude tag.
+     *                 "package" or "private". If null, only check for an exclude tag.
      * @return boolean Set if this element is shown.
      */
     public boolean shownElement(Doc doc, String visLevel) {
         // If a doc block contains @exclude or a similar such tag, 
         // then don't display it.
-	if (doExclude && excludeTag != null && doc != null) {
+        if (doExclude && excludeTag != null && doc != null) {
             String rct = doc.getRawCommentText();
             if (rct != null && rct.indexOf(excludeTag) != -1) {
                 return false;
-	    }
-	}  
-	if (visLevel == null) {
-	    return true;
-	}
-	ProgramElementDoc ped = null;
-	if (doc instanceof ProgramElementDoc) {
-	    ped = (ProgramElementDoc)doc;
-	}
+            }
+        }
+        if (visLevel == null) {
+            return true;
+        }
+        ProgramElementDoc ped = null;
+        if (doc instanceof ProgramElementDoc) {
+            ped = (ProgramElementDoc) doc;
+        }
         if (visLevel.compareTo("private") == 0)
             return true;
         // Show all that is not private 
@@ -713,9 +713,9 @@ public class RootDocToXML {
             return ped.isPublic();
         return false;
     } //shownElement()
-    
-    /** 
-     * Strip out non-printing characters, replacing them with a character 
+
+    /**
+     * Strip out non-printing characters, replacing them with a character
      * which will not change where the end of the first sentence is found.
      * This character is the hash mark, '&#035;'.
      */
@@ -731,42 +731,42 @@ public class RootDocToXML {
                 continue;
             // There must be a better way that is still platform independent!
             if (c == ' ' ||
-                c == '.' ||
-                c == ',' ||
-                c == '\r' ||
-                c == '\t' ||
-                c == '\n' ||
-                c == '!' ||
-                c == '?' ||
-                c == ';' ||
-                c == ':' ||
-                c == '[' ||
-                c == ']' ||
-                c == '(' ||
-                c == ')' ||
-                c == '~' ||
-                c == '@' ||
-                c == '#' ||
-                c == '$' ||
-                c == '%' ||
-                c == '^' ||
-                c == '&' ||
-                c == '*' ||
-                c == '-' ||
-                c == '=' ||
-                c == '+' ||
-                c == '_' ||
-                c == '|' ||
-                c == '\\' ||
-                c == '/' ||
-                c == '\'' ||
-                c == '}' ||
-                c == '{' ||
-                c == '"' ||
-                c == '<' ||
-                c == '>' ||
-                c == '`'
-                )
+                    c == '.' ||
+                    c == ',' ||
+                    c == '\r' ||
+                    c == '\t' ||
+                    c == '\n' ||
+                    c == '!' ||
+                    c == '?' ||
+                    c == ';' ||
+                    c == ':' ||
+                    c == '[' ||
+                    c == ']' ||
+                    c == '(' ||
+                    c == ')' ||
+                    c == '~' ||
+                    c == '@' ||
+                    c == '#' ||
+                    c == '$' ||
+                    c == '%' ||
+                    c == '^' ||
+                    c == '&' ||
+                    c == '*' ||
+                    c == '-' ||
+                    c == '=' ||
+                    c == '+' ||
+                    c == '_' ||
+                    c == '|' ||
+                    c == '\\' ||
+                    c == '/' ||
+                    c == '\'' ||
+                    c == '}' ||
+                    c == '{' ||
+                    c == '"' ||
+                    c == '<' ||
+                    c == '>' ||
+                    c == '`'
+            )
                 continue;
 /* Doesn't seem to return the expected values?
             int val = Character.getNumericValue(c);
@@ -793,16 +793,16 @@ public class RootDocToXML {
         return new String(sa);
     }
 
-    /** Return true if val is in the range [min|max], inclusive. */
+    /**
+     * Return true if val is in the range [min|max], inclusive.
+     */
     public boolean inRange(int val, int min, int max) {
         if (val < min)
             return false;
-        if (val > max)
-            return false;
-        return true;
+        return val <= max;
     }
 
-    /** 
+    /**
      * Add at least the first sentence from a doc block to the API. This is
      * used by the report generator if no comment is provided.
      * Need to make sure that HTML tags are not confused with XML tags.
@@ -813,13 +813,13 @@ public class RootDocToXML {
      * to XHTML, the first option is used.
      */
     public void addDocumentation(ProgramElementDoc ped, int indent) {
-        String rct = ((Doc)ped).getRawCommentText();
+        String rct = ped.getRawCommentText();
         if (rct != null) {
-            rct = stripNonPrintingChars(rct, (Doc)ped);
+            rct = stripNonPrintingChars(rct, ped);
             rct = rct.trim();
-            if (rct.compareTo("") != 0 && 
-                rct.indexOf(Comments.placeHolderText) == -1 &&
-                rct.indexOf("InsertOtherCommentsHere") == -1) {
+            if (rct.compareTo("") != 0 &&
+                    rct.indexOf(Comments.placeHolderText) == -1 &&
+                    rct.indexOf("InsertOtherCommentsHere") == -1) {
                 int idx = endOfFirstSentence(rct);
                 if (idx == 0)
                     return;
@@ -830,12 +830,12 @@ public class RootDocToXML {
                 if (idx == -1)
                     firstSentence = rct;
                 else
-                    firstSentence = rct.substring(0, idx+1);
+                    firstSentence = rct.substring(0, idx + 1);
                 boolean checkForAts = false;
-                if (checkForAts && firstSentence.indexOf("@") != -1 && 
-                    firstSentence.indexOf("@link") == -1) {
-                    System.out.println("Warning: @ tag seen in comment: " + 
-                                       firstSentence);
+                if (checkForAts && firstSentence.indexOf("@") != -1 &&
+                        firstSentence.indexOf("@link") == -1) {
+                    System.out.println("Warning: @ tag seen in comment: " +
+                            firstSentence);
                 }
                 String firstSentenceNoTags = API.stuffHTMLTags(firstSentence);
                 outputFile.println(firstSentenceNoTags);
@@ -845,7 +845,7 @@ public class RootDocToXML {
         }
     }
 
-    /** 
+    /**
      * Add at least the first sentence from a doc block for a package to the API. This is
      * used by the report generator if no comment is provided.
      * The default source tree may not include the package.html files, so
@@ -879,7 +879,7 @@ public class RootDocToXML {
                     while (srcLocation.startsWith("..")) {
                         srcLocation = srcLocation.substring(3);
                         int idx = curDir.lastIndexOf(JDiff.DIR_SEP);
-                        curDir = curDir.substring(0, idx+1);
+                        curDir = curDir.substring(0, idx + 1);
                     }
                     srcLocation = curDir + srcLocation;
                 }
@@ -894,41 +894,41 @@ public class RootDocToXML {
             FileInputStream f = new FileInputStream(filename);
             BufferedReader d = new BufferedReader(new InputStreamReader(f));
             String str = d.readLine();
- 	    // Ignore everything except the lines between <body> elements
-	    boolean inBody = false;
-	    while(str != null) {
+            // Ignore everything except the lines between <body> elements
+            boolean inBody = false;
+            while (str != null) {
                 if (!inBody) {
-		    if (str.toLowerCase().trim().startsWith("<body")) {
-			inBody = true;
-		    }
-		    str = d.readLine(); // Get the next line
-		    continue; // Ignore the line
-		} else {
-		    if (str.toLowerCase().trim().startsWith("</body")) {
-			inBody = false;
-			continue; // Ignore the line
-		    }
-		}
+                    if (str.toLowerCase().trim().startsWith("<body")) {
+                        inBody = true;
+                    }
+                    str = d.readLine(); // Get the next line
+                    continue; // Ignore the line
+                } else {
+                    if (str.toLowerCase().trim().startsWith("</body")) {
+                        inBody = false;
+                        continue; // Ignore the line
+                    }
+                }
                 if (rct == null)
                     rct = str + "\n";
                 else
                     rct += str + "\n";
                 str = d.readLine();
             }
-        }  catch(java.io.FileNotFoundException e) {
+        } catch (java.io.FileNotFoundException e) {
             // If it doesn't exist, that's fine
             if (trace)
                 System.out.println("No package level documentation file at '" + filename + "'");
-        } catch(java.io.IOException e) {
+        } catch (java.io.IOException e) {
             System.out.println("Error reading file \"" + filename + "\": " + e.getMessage());
             System.exit(5);
-        }     
+        }
         if (rct != null) {
-            rct = stripNonPrintingChars(rct, (Doc)pd);
+            rct = stripNonPrintingChars(rct, pd);
             rct = rct.trim();
             if (rct.compareTo("") != 0 &&
-                rct.indexOf(Comments.placeHolderText) == -1 &&
-                rct.indexOf("InsertOtherCommentsHere") == -1) {
+                    rct.indexOf(Comments.placeHolderText) == -1 &&
+                    rct.indexOf("InsertOtherCommentsHere") == -1) {
                 int idx = endOfFirstSentence(rct);
                 if (idx == 0)
                     return;
@@ -939,7 +939,7 @@ public class RootDocToXML {
                 if (idx == -1)
                     firstSentence = rct;
                 else
-                    firstSentence = rct.substring(0, idx+1);
+                    firstSentence = rct.substring(0, idx + 1);
                 String firstSentenceNoTags = API.stuffHTMLTags(firstSentence);
                 outputFile.println(firstSentenceNoTags);
                 for (int i = 0; i < indent; i++) outputFile.print(" ");
@@ -948,38 +948,38 @@ public class RootDocToXML {
         }
     }
 
-    /** 
+    /**
      * Find the index of the end of the first sentence in the given text,
      * when writing out to an XML file.
-     * This is an extended version of the algorithm used by the DocCheck 
+     * This is an extended version of the algorithm used by the DocCheck
      * Javadoc doclet. It checks for @tags too.
      *
      * @param text The text to be searched.
      * @return The index of the end of the first sentence. If there is no
-     *         end, return -1. If there is no useful text, return 0.
-     *         If the whole doc block comment is wanted (default), return -1.
+     * end, return -1. If there is no useful text, return 0.
+     * If the whole doc block comment is wanted (default), return -1.
      */
     public static int endOfFirstSentence(String text) {
         return endOfFirstSentence(text, true);
     }
 
-    /** 
+    /**
      * Find the index of the end of the first sentence in the given text.
-     * This is an extended version of the algorithm used by the DocCheck 
+     * This is an extended version of the algorithm used by the DocCheck
      * Javadoc doclet. It checks for &#064;tags too.
      *
-     * @param text The text to be searched.
+     * @param text         The text to be searched.
      * @param writingToXML Set to true when writing out XML.
      * @return The index of the end of the first sentence. If there is no
-     *         end, return -1. If there is no useful text, return 0.
-     *         If the whole doc block comment is wanted (default), return -1.
+     * end, return -1. If there is no useful text, return 0.
+     * If the whole doc block comment is wanted (default), return -1.
      */
     public static int endOfFirstSentence(String text, boolean writingToXML) {
         if (saveAllDocs && writingToXML)
             return -1;
-	int textLen = text.length();
-	if (textLen == 0)
-	    return 0;
+        int textLen = text.length();
+        if (textLen == 0)
+            return 0;
         int index = -1;
         // Handle some special cases
         int fromindex = 0;
@@ -991,7 +991,7 @@ public class RootDocToXML {
         while (i < textLen && text.charAt(i) == ' ') {
             i++;
         }
-        if (text.charAt(i) == '@' && fromindex < textLen-1)
+        if (text.charAt(i) == '@' && fromindex < textLen - 1)
             fromindex = i + 1;
         // Use the brute force approach.
         index = minIndex(index, text.indexOf("? ", fromindex));
@@ -1028,8 +1028,8 @@ public class RootDocToXML {
         index = minIndex(index, text.indexOf("<blockquote", 2));  // Not at start
         index = minIndex(index, text.indexOf("<pre", fromindex)); // May contain anything!
         // Avoid the char at the start of a tag in some cases
-        if (index != -1 &&  
-            (text.charAt(index) == '@' || text.charAt(index) == '<')) {
+        if (index != -1 &&
+                (text.charAt(index) == '@' || text.charAt(index) == '<')) {
             if (index != 0)
                 index--;
         }
@@ -1049,10 +1049,11 @@ public class RootDocToXML {
 */
         return index;
     }
-    
+
     /**
      * Return the minimum of two indexes if > -1, and return -1
      * only if both indexes = -1.
+     *
      * @param i an int index
      * @param j an int index
      * @return an int equal to the minimum index > -1, or -1
@@ -1060,91 +1061,93 @@ public class RootDocToXML {
     public static int minIndex(int i, int j) {
         if (i == -1) return j;
         if (j == -1) return i;
-        return Math.min(i,j);
+        return Math.min(i, j);
     }
-    
-    /** 
-     * The name of the file where the XML representing the API will be 
-     * stored. 
+
+    /**
+     * The name of the file where the XML representing the API will be
+     * stored.
      */
     public static String outputFileName = null;
 
-    /** 
-     * The identifier of the API being written out in XML, e.g. 
-     * &quotSuperProduct 1.3&quot;. 
+    /**
+     * The identifier of the API being written out in XML, e.g.
+     * &quotSuperProduct 1.3&quot;.
      */
     public static String apiIdentifier = null;
 
-    /** 
-     * The file where the XML representing the API will be stored. 
+    /**
+     * The file where the XML representing the API will be stored.
      */
     private static PrintWriter outputFile = null;
-    
-    /** 
-     * The name of the directory where the XML representing the API will be 
-     * stored. 
+
+    /**
+     * The name of the directory where the XML representing the API will be
+     * stored.
      */
     public static String outputDirectory = null;
 
-    /** 
-     * Do not display a class  with a lower level of visibility than this. 
+    /**
+     * Do not display a class  with a lower level of visibility than this.
      * Default is to display all public and protected classes.
      */
     public static String classVisibilityLevel = "protected";
 
-    /** 
-     * Do not display a member with a lower level of visibility than this. 
-     * Default is to display all public and protected members 
+    /**
+     * Do not display a member with a lower level of visibility than this.
+     * Default is to display all public and protected members
      * (constructors, methods, fields).
      */
     public static String memberVisibilityLevel = "protected";
 
-    /** 
-     * If set, then save the entire contents of a doc block comment in the 
-     * API file. If not set, then just save the first sentence. Default is 
+    /**
+     * If set, then save the entire contents of a doc block comment in the
+     * API file. If not set, then just save the first sentence. Default is
      * that this is set.
      */
     public static boolean saveAllDocs = true;
 
-    /** 
+    /**
      * If set, exclude program elements marked with whatever the exclude tag
      * is specified as, e.g. "@exclude".
      */
     public static boolean doExclude = false;
 
-    /** 
+    /**
      * Exclude program elements marked with this String, e.g. "@exclude".
      */
     public static String excludeTag = null;
 
-    /** 
-     * The base URI for locating necessary DTDs and Schemas. By default, this 
+    /**
+     * The base URI for locating necessary DTDs and Schemas. By default, this
      * is "http://www.w3.org". A typical value to use local copies of DTD files
      * might be "file:///C:/jdiff/lib"
      */
     public static String baseURI = "http://www.w3.org";
 
-    /** 
+    /**
      * If set, then strip out non-printing characters from documentation.
      * Default is that this is set.
      */
     static boolean stripNonPrintables = true;
 
-    /** 
+    /**
      * If set, then add the information about the source file and line number
      * which is available in J2SE1.4. Default is that this is not set.
      */
     static boolean addSrcInfo = false;
 
-    /** 
-     * If set, scan classes with no packages. 
-     * If the source is  a jar file this may duplicates classes, so 
-     * disable it using the -packagesonly option. Default is that this is 
+    /**
+     * If set, scan classes with no packages.
+     * If the source is  a jar file this may duplicates classes, so
+     * disable it using the -packagesonly option. Default is that this is
      * not set.
      */
     static boolean packagesOnly = false;
 
-    /** Set to enable increased logging verbosity for debugging. */
-    private static boolean trace = false;
+    /**
+     * Set to enable increased logging verbosity for debugging.
+     */
+    private static final boolean trace = false;
 
 } //RootDocToXML

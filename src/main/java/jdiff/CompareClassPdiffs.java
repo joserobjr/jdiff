@@ -1,25 +1,24 @@
 package jdiff;
 
-import java.util.*;
+import java.util.Comparator;
 
-/** 
+/**
  * Class to compare two ClassDiff objects.
- *
+ * <p>
  * See the file LICENSE.txt for copyright details.
+ *
  * @author Matthew Doar, mdoar@pobox.com
  */
-class CompareClassPdiffs implements Comparator {
-    /** 
+class CompareClassPdiffs implements Comparator<ClassDiff> {
+    /**
      * Compare two class diffs by their percentage difference,
      * and then by name.
      */
-    public int compare(Object obj1, Object obj2){
-        ClassDiff c1 = (ClassDiff)obj1;
-        ClassDiff c2 = (ClassDiff)obj2;
-        if (c1.pdiff < c2.pdiff)
+    public int compare(ClassDiff obj1, ClassDiff obj2) {
+        if (obj1.pdiff < obj2.pdiff)
             return 1;
-        if (c1.pdiff > c2.pdiff)
+        if (obj1.pdiff > obj2.pdiff)
             return -1;
-        return c1.name_.compareTo(c2.name_);
+        return obj1.name_.compareTo(obj2.name_);
     }
 }
