@@ -114,6 +114,16 @@ public class JDiff extends Doclet {
      */
     static String javaVersion = System.getProperty("java.version");
 
+    /**
+     * When set, emit changes like "Method was inherited from Example, but is now defined locally."
+     */
+    static boolean compareMethodInheritance = true;
+
+    /**
+     * When set, emit changes like ", but is now inherited from Example."
+     */
+    static boolean compareFieldInheritance = true;
+
     @CalledExternally
     public static LanguageVersion languageVersion() {
         return LanguageVersion.JAVA_1_5;

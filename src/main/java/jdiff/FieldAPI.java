@@ -108,7 +108,7 @@ class FieldAPI implements Comparable<FieldAPI> {
         comp = type_.compareTo(o.type_);
         if (comp != 0)
             return comp;
-        if (APIComparator.changedInheritance(inheritedFrom_, o.inheritedFrom_) != 0)
+        if (JDiff.compareFieldInheritance && APIComparator.changedInheritance(inheritedFrom_, o.inheritedFrom_) != 0)
             return -1;
         if (isTransient_ != o.isTransient_) {
             return -1;

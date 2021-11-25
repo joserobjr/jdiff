@@ -192,6 +192,16 @@ public class JDiffAntTask {
     private ProjectInfo newProject;
 
     /**
+     * When set, emit changes like "Method was inherited from Example, but is now defined locally."
+     */
+    private boolean compareMethodInheritance = true;
+
+    /**
+     * When set, emit changes like ", but is now inherited from Example."
+     */
+    private boolean compareFieldInheritance = true;
+
+    /**
      * Called by Ant to execute the task.
      * @throws BuildException If there were problems executing the task.
      */
@@ -405,6 +415,16 @@ public class JDiffAntTask {
         DocletParam dp6 = dInfo.createParam();
         dp6.setName("-javadocnew");
         dp6.setValue(".." + File.separator + newapiname + File.separator);
+
+        if (!compareMethodInheritance) {
+            DocletParam docletParam = dInfo.createParam();
+            docletParam.setName("-dontcomparemethodinheritance");
+        }
+
+        if (!compareFieldInheritance) {
+            DocletParam docletParam = dInfo.createParam();
+            docletParam.setName("-dontcomparefieldinheritance");
+        }
 
         if (getStats()) {
             // There are no arguments to this argument
@@ -708,6 +728,22 @@ public class JDiffAntTask {
 
     public void setLinkSource(boolean linkSource) {
         this.linkSource = linkSource;
+    }
+
+    public boolean isCompareMethodInheritance() {
+        return compareMethodInheritance;
+    }
+
+    public void setCompareMethodInheritance(boolean compareMethodInheritance) {
+        this.compareMethodInheritance = compareMethodInheritance;
+    }
+
+    public boolean isCompareFieldInheritance() {
+        return compareFieldInheritance;
+    }
+
+    public void setCompareFieldInheritance(boolean compareFieldInheritance) {
+        this.compareFieldInheritance = compareFieldInheritance;
     }
 
     public void addLinkOffline(String link) {

@@ -92,6 +92,8 @@ public class Options {
             case "-apiname": return 2;
             case "-oldapi": return 2;
             case "-newapi": return 2;
+            case "-dontcomparemethodinheritance": return 1;
+            case "-dontcomparefieldinheritance": return 1;
 
             // Options to control the location of the XML files
             case "-apidir": return 2;
@@ -332,6 +334,12 @@ public class Options {
                     break;
                 case "-showallchanges":
                     Diff.showAllChanges = true;
+                    break;
+                case "-dontcomparemethodinheritance":
+                    JDiff.compareMethodInheritance = false;
+                    break;
+                case "-dontcomparefieldinheritance":
+                    JDiff.compareFieldInheritance = false;
                     break;
                 case "-nosuggest":
                     if (option.length < 2) {

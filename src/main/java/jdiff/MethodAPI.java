@@ -130,7 +130,7 @@ class MethodAPI implements Comparable<MethodAPI> {
         comp = returnType_.compareTo(o.returnType_);
         if (comp != 0)
             return comp;
-        if (APIComparator.changedInheritance(inheritedFrom_, o.inheritedFrom_) != 0)
+        if (JDiff.compareMethodInheritance && APIComparator.changedInheritance(inheritedFrom_, o.inheritedFrom_) != 0)
             return -1;
         if (isAbstract_ != o.isAbstract_) {
             return -1;

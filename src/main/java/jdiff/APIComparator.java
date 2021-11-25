@@ -702,7 +702,7 @@ public class APIComparator {
             differs = true;
         }
         // Changes in inheritance
-        int inh = changedInheritance(oldMethod.inheritedFrom_, newMethod.inheritedFrom_);
+        int inh = JDiff.compareMethodInheritance? changedInheritance(oldMethod.inheritedFrom_, newMethod.inheritedFrom_) : 0;
         if (inh != 0)
             differs = true;
         if (inh == 1) {
@@ -832,7 +832,7 @@ public class APIComparator {
                         memberDiff.oldType_ = oldField.type_;
                         memberDiff.newType_ = newField.type_;
                         // Changes in inheritance
-                        int inh = changedInheritance(oldField.inheritedFrom_, newField.inheritedFrom_);
+                        int inh = JDiff.compareFieldInheritance? changedInheritance(oldField.inheritedFrom_, newField.inheritedFrom_) : 0;
                         if (inh != 0)
                             differs = true;
                         if (inh == 1) {
