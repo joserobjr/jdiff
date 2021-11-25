@@ -437,6 +437,8 @@ public class JDiffAntTask {
 
         String apiName = proj.getName();
         Javadoc javadoc = initJavadoc("Javadoc for " + apiName);
+        Optional.ofNullable(getCharset()).ifPresent(javadoc::setCharset);
+        Optional.ofNullable(getDocEncoding()).ifPresent(javadoc::setDocencoding);
         javadoc.setDestdir(new File(destdir, apiName));
         addSourcePaths(javadoc, proj);
 
@@ -471,8 +473,6 @@ public class JDiffAntTask {
         Optional.ofNullable(javadocHeader).ifPresent(javadoc::addHeader);
         Optional.ofNullable(javadocFooter).ifPresent(javadoc::addFooter);
 
-        Optional.ofNullable(getCharset()).ifPresent(javadoc::setCharset);
-        Optional.ofNullable(getDocEncoding()).ifPresent(javadoc::setDocencoding);
         Optional.ofNullable(getEncoding()).ifPresent(javadoc::setEncoding);
 
         Optional.ofNullable(linkOffline).ifPresent(list -> list.forEach(javadoc::setLinkoffline));
