@@ -3,7 +3,7 @@ package com.acme.sp;
 import java.lang.*;
 
 /**
- * This class is the interface for accessing an SP object.
+ *  用来描述一个玩家和获得这个玩家相应信息的接口。 This class is the interface for accessing an SP object.
  */
 public class SPImpl implements SP {
 

@@ -28,10 +28,13 @@ Creates a report in the directory "myreport". This will not run as shipped.
   <!-- Set classpath to the location where the antjdiff.jar is located -->
   <taskdef name="jdiff"
            classname="jdiff.JDiffAntTask"
-           classpath="../antjdiff/build/libs/antjdiff-2.0.0-SNAPSHOT.jar" />
+           classpath="../antjdiff/build/libs/antjdiff-2.0.0-PN-SNAPSHOT.jar" />
   <jdiff destdir="./build/myreport"
          verbose="on"
          stats="on"
+         encoding="UTF-8"
+         docencoding="UTF-8"
+         charset="UTF-8"
          docchanges="on">
     <old name="Version 1">
       <!-- This is the location of your old source files -->

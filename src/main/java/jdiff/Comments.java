@@ -161,7 +161,7 @@ public class Comments {
              PrintWriter xsdFile = new PrintWriter(fos)
         ) {
             // The contents of the comments.xsd file
-            xsdFile.println("<?xml version=\"1.0\" encoding=\"iso-8859-1\" standalone=\"no\"?>");
+            JDiff.addXmlTag(xsdFile);
             xsdFile.println("<xsd:schema xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">");
             xsdFile.println();
             xsdFile.println("<xsd:annotation>");
@@ -495,7 +495,7 @@ public class Comments {
      * Emit the XML header.
      */
     public void emitXMLHeader(String filename) {
-        outputFile.println("<?xml version=\"1.0\" encoding=\"iso-8859-1\" standalone=\"no\"?>");
+        JDiff.addXmlTag(outputFile);
         outputFile.println("<comments");
         outputFile.println("  xmlns:xsi='" + RootDocToXML.baseURI + "/2001/XMLSchema-instance'");
         outputFile.println("  xsi:noNamespaceSchemaLocation='comments.xsd'");

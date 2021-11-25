@@ -36,6 +36,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -178,7 +179,7 @@ public class JDiffAntTask {
     /**
      * Set an additional parameter on the command line.
      */
-    private List<String> javadocAdditionalParams;
+    private List<AdditionalParamInfo> additionalParameters;
 
     /**
      * A ProjectInfo-derived object for the older version of the project
@@ -235,8 +236,8 @@ public class JDiffAntTask {
         );
 
         // Call Javadoc twice to generate Javadoc for each project
-        generateJavadoc(oldProject);
-        generateJavadoc(newProject);
+        generateJavadoc(oldProject, AdditionalParamInfo::isOldJavadoc);
+        generateJavadoc(newProject, AdditionalParamInfo::isNewJavadoc);
 
         // Get the result of the async process
         File assets;
@@ -250,9 +251,9 @@ public class JDiffAntTask {
 
         try {
             // Call Javadoc three times for JDiff.
-            generateXML(oldProject, jDiffClasspath);
-            generateXML(newProject, jDiffClasspath);
-            compareXML(oldProject.getName(), newProject.getName(), assets, jDiffClasspath);
+            generateXML(oldProject, jDiffClasspath, AdditionalParamInfo::isOldJavadocXML);
+            generateXML(newProject, jDiffClasspath, AdditionalParamInfo::isNewJavadocXML);
+            compareXML(oldProject.getName(), newProject.getName(), assets, jDiffClasspath, AdditionalParamInfo::isComparison);
 
             // Repeat some useful information
             logReportLocation();
@@ -308,6 +309,17 @@ public class JDiffAntTask {
         return tempFolder.toFile();
     }
 
+    private void addAdditionalParams(Javadoc javadoc, Predicate<AdditionalParamInfo> additionalParamFilter) {
+        Optional.ofNullable(additionalParameters).ifPresent(list -> list.forEach(additionalParamInfo -> {
+            if (additionalParamFilter.test(additionalParamInfo)) {
+                javadoc.createArg().setValue(Objects.requireNonNull(
+                        additionalParamInfo.getValue(),
+                        "The additional param value cannot be null"
+                ));
+            }
+        }));
+    }
+
     /**
      * Convenient method to create a Javadoc task, configure it and run it
      * to generate the XML representation of a project's source files.
@@ -315,11 +327,12 @@ public class JDiffAntTask {
      * @param proj The current Project
      * @param jDiffClasspath The JDiff doclet classpath
      */
-    private void generateXML(ProjectInfo proj, String jDiffClasspath) {
+    private void generateXML(ProjectInfo proj, String jDiffClasspath, Predicate<AdditionalParamInfo> additionalParamFilter) {
         String apiName = proj.getName();
         Javadoc javadoc = initJavadoc("Analyzing " + apiName);
         javadoc.setDestdir(getDestdir());
         addSourcePaths(javadoc, proj);
+        addAdditionalParams(javadoc, additionalParamFilter);
 
         // Tell Javadoc which packages we want to scan.
         // JDiff works with packagenames, not sourcefiles.
@@ -355,8 +368,11 @@ public class JDiffAntTask {
      * @param assets The path to the extracted assets folder
      * @param jDiffClasspath The JDiff doclet classpath
      */
-    private void compareXML(String oldapiname, String newapiname, File assets, String jDiffClasspath) {
+    private void compareXML(String oldapiname, String newapiname, File assets, String jDiffClasspath,
+                            Predicate<AdditionalParamInfo> additionalParamFilter) {
         Javadoc javadoc = initJavadoc("Comparing versions");
+        Optional.ofNullable(getDocEncoding()).ifPresent(javadoc::setDocencoding);
+        addAdditionalParams(javadoc, additionalParamFilter);
         javadoc.setDestdir(getDestdir());
 
         // Tell Javadoc which files we want to scan - a dummy file in this case
@@ -428,7 +444,7 @@ public class JDiffAntTask {
      *
      * @param proj The current Project
      */
-    private void generateJavadoc(ProjectInfo proj) {
+    private void generateJavadoc(ProjectInfo proj, Predicate<AdditionalParamInfo> additionalParamFilter) {
         String javadocPath = proj.getJavadoc();
         if (javadocPath != null && !javadocPath.equalsIgnoreCase("generated")) {
             project.log("Configured to use existing Javadoc located in " + javadocPath, Project.MSG_INFO);
@@ -437,7 +453,7 @@ public class JDiffAntTask {
 
         String apiName = proj.getName();
         Javadoc javadoc = initJavadoc("Javadoc for " + apiName);
-        Optional.ofNullable(getCharset()).ifPresent(javadoc::setCharset);
+        addAdditionalParams(javadoc, additionalParamFilter);
         Optional.ofNullable(getDocEncoding()).ifPresent(javadoc::setDocencoding);
         javadoc.setDestdir(new File(destdir, apiName));
         addSourcePaths(javadoc, proj);
@@ -474,9 +490,9 @@ public class JDiffAntTask {
         Optional.ofNullable(javadocFooter).ifPresent(javadoc::addFooter);
 
         Optional.ofNullable(getEncoding()).ifPresent(javadoc::setEncoding);
+        Optional.ofNullable(getCharset()).ifPresent(javadoc::setCharset);
 
         Optional.ofNullable(linkOffline).ifPresent(list -> list.forEach(javadoc::setLinkoffline));
-        Optional.ofNullable(javadocAdditionalParams).ifPresent(list -> list.forEach(javadoc::setAdditionalparam));
         javadoc.init();
 
         // Set up some common parameters for the Javadoc task
@@ -699,11 +715,11 @@ public class JDiffAntTask {
         linkOffline.add(link);
     }
 
-    public void addAdditionalJavadocParam(String param) {
-        if (javadocAdditionalParams == null) {
-            javadocAdditionalParams = new ArrayList<>();
+    public void addConfiguredAdditionalParam(AdditionalParamInfo param) {
+        if (additionalParameters == null) {
+            additionalParameters = new ArrayList<>();
         }
-        javadocAdditionalParams.add(param);
+        additionalParameters.add(param);
     }
 
     /**
@@ -720,6 +736,91 @@ public class JDiffAntTask {
      */
     public void addConfiguredNew(ProjectInfo projInfo) {
         newProject = projInfo;
+    }
+
+    /**
+     * This class is allows ant projects to define custom parameters and decide where they apply.
+     * <p>
+     * All parameters apply to all javadoc calls by default.
+     */
+    public static class AdditionalParamInfo {
+        /**
+         * The param.
+         */
+        private String value;
+
+        /**
+         * This parameter is applied when the old javadoc is being generated.
+         */
+        private boolean oldJavadoc = true;
+
+        /**
+         * This parameter is applied when the new javadoc is being generated.
+         */
+        private boolean newJavadoc = true;
+
+        /**
+         * This parameter is applied when the old javadoc XML is being generated.
+         */
+        private boolean oldJavadocXML = true;
+
+        /**
+         * This parameter is applied when the new javadoc XML is being generated.
+         */
+        private boolean newJavadocXML = true;
+
+        /**
+         * This parameter is applied at the final stage, where the jdiff is generating the final files.
+         */
+        private boolean comparison = true;
+
+        public String getValue() {
+            return value;
+        }
+
+        public void setValue(String value) {
+            this.value = value;
+        }
+
+        public boolean isOldJavadoc() {
+            return oldJavadoc;
+        }
+
+        public void setOldJavadoc(boolean oldJavadoc) {
+            this.oldJavadoc = oldJavadoc;
+        }
+
+        public boolean isNewJavadoc() {
+            return newJavadoc;
+        }
+
+        public void setNewJavadoc(boolean newJavadoc) {
+            this.newJavadoc = newJavadoc;
+        }
+
+        public boolean isOldJavadocXML() {
+            return oldJavadocXML;
+        }
+
+        public void setOldJavadocXML(boolean oldJavadocXML) {
+            this.oldJavadocXML = oldJavadocXML;
+        }
+
+        public boolean isNewJavadocXML() {
+            return newJavadocXML;
+        }
+
+        public void setNewJavadocXML(boolean newJavadocXML) {
+            this.newJavadocXML = newJavadocXML;
+        }
+
+        public boolean isComparison() {
+            return comparison;
+        }
+
+        public void setComparison(boolean comparison) {
+            this.comparison = comparison;
+        }
     }
 
     /**

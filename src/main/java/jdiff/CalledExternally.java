@@ -16,24 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/lgpl-3.0.html>.
  */
 
-plugins {
-    java
-}
+package jdiff;
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-}
-
-allprojects {
-    group = "org.powernukkit"
-    version = "2.0.0-PN-SNAPSHOT"
-    repositories {
-        mavenCentral()
-    }
-}
-
-dependencies {
-    implementation("xerces:xercesImpl:2.12.1")
-    compileOnly(files("${System.getProperty("java.home")}/../lib/tools.jar"))
+public @interface CalledExternally {
 }

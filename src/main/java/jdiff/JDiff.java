@@ -24,6 +24,7 @@ import com.sun.javadoc.LanguageVersion;
 import com.sun.javadoc.RootDoc;
 
 import java.io.File;
+import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -57,7 +58,7 @@ public class JDiff extends Doclet {
     /**
      * The current JDiff version.
      */
-    static final String version = "1.1.1";
+    static final String version = "2.0.0-PN";
 
     /**
      * Set to enable increased logging verbosity for debugging.
@@ -99,6 +100,11 @@ public class JDiff extends Doclet {
     static boolean compareAPIs;
 
     /**
+     * If set, a http-equiv meta will be added setting this charset to the html files.
+     */
+    static String charset;
+
+    /**
      * The file separator for the local filesystem, forward or backward slash.
      */
     static String DIR_SEP = System.getProperty("file.separator");
@@ -108,6 +114,7 @@ public class JDiff extends Doclet {
      */
     static String javaVersion = System.getProperty("java.version");
 
+    @CalledExternally
     public static LanguageVersion languageVersion() {
         return LanguageVersion.JAVA_1_5;
     }
@@ -118,6 +125,7 @@ public class JDiff extends Doclet {
      * @param root a RootDoc object passed by Javadoc
      * @return true if document generation succeeds
      */
+    @CalledExternally
     public static boolean start(RootDoc root) {
         if (root != null)
             System.out.println("JDiff: doclet started ...");
@@ -133,6 +141,7 @@ public class JDiff extends Doclet {
      * @param option a String containing an option
      * @return an int telling how many components that option has
      */
+    @CalledExternally
     public static int optionLength(String option) {
         return Options.optionLength(option);
     }
@@ -146,6 +155,7 @@ public class JDiff extends Doclet {
      * @return true if no errors were found, and all options are
      * valid
      */
+    @CalledExternally
     public static boolean validOptions(String[][] options,
                                        DocErrorReporter reporter) {
         return Options.validOptions(options, reporter);
@@ -156,6 +166,7 @@ public class JDiff extends Doclet {
      * application, and uses ANT to execute the build configuration in the
      * XML configuration file passed in.
      */
+    @CalledExternally
     public static void main(String[] args) {
         if (args.length == 0) {
             //showUsage();
@@ -220,6 +231,14 @@ public class JDiff extends Doclet {
         }
         System.gc(); // Clean up after running ANT
         return -1;
+    }
+
+    static void addXmlTag(PrintWriter writer) {
+        if (charset != null && !charset.isEmpty()) {
+            writer.println("<?xml version=\"1.0\" encoding=\""+charset+"\" standalone=\"no\"?>");
+        } else {
+            writer.println("<?xml version=\"1.0\" standalone=\"no\"?>");
+        }
     }
 
     /**
@@ -324,4 +343,9 @@ public class JDiff extends Doclet {
         return true;
     }
 
-} //JDiff
+    static void addCharset(PrintWriter writer) {
+        if (charset != null && !charset.isEmpty()) {
+            writer.println("<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html;charset=utf-8\">");
+        }
+    }
+}
