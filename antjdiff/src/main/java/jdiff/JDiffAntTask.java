@@ -420,6 +420,8 @@ public class JDiffAntTask {
             java.nio.file.Path assetsPath = assets.toPath();
             copyFile(assetsPath.resolve("black.gif"), destDirPath);
             copyFile(assetsPath.resolve("background.gif"), destDirPath);
+            copyFile(assetsPath.resolve("api.xsd"), destDirPath);
+            copyFile(assetsPath.resolve("comments.xsd"), destDirPath);
         }
 
         if (getDocchanges()) {
